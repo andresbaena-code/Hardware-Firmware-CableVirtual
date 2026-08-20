@@ -22,3 +22,10 @@ desktop.ini
 
 # Spec Kit / agente local
 .claude/settings.local.json
+
+# PlatformIO
+.pio/
+.vscode/ipch/
+.vscode/c_cpp_properties.json
+.vscode/launch.json
+compile_commands.json
