@@ -19,3 +19,6 @@ Thumbs.db
 desktop.ini
 ~$*
 .DS_Store
+
+# Spec Kit / agente local
+.claude/settings.local.json
