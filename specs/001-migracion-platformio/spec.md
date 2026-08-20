@@ -235,9 +235,10 @@ de diferencias respecto al firmware vigente.
 - **FR-017**: El sistema DEBE atender la recepción de respuestas con suficiente frecuencia
   para no perder confirmaciones, incluso mientras hay órdenes pendientes de transmisión.
 - **FR-018**: El sistema NO DEBE descartar datos ya recibidos del radio al preparar una
-  transmisión. [NEEDS CLARIFICATION: el firmware actual vacía el buffer de entrada del
-  radio justo antes de transmitir, lo que puede perder confirmaciones que ya habían
-  llegado. ¿Se corrige o se conserva por compatibilidad con el comportamiento observado?]
+  transmisión. Toda respuesta recibida DEBE consumirse y evaluarse antes de decidir un
+  reintento. *(Decisión 2026-08-20: el firmware base vaciaba el buffer de entrada del
+  radio justo antes de transmitir, descartando confirmaciones ya recibidas y provocando
+  reintentos y disparos de solenoide innecesarios. Se corrige.)*
 
 ### Requisitos Funcionales — Interfaz visual
 
@@ -245,10 +246,16 @@ de diferencias respecto al firmware vigente.
   organizadas en tres grupos de ocho, más una línea de identificación del sistema.
 - **FR-020**: El sistema DEBE distinguir visualmente al menos tres condiciones por
   válvula: cerrada, abierta y orden en curso sin confirmar.
-- **FR-021**: El panel DEBE representar el estado abierto y cerrado de forma coherente con
-  lo que ve el operador en el tablero. [NEEDS CLARIFICATION: el firmware actual imprime el
-  estado invertido respecto al valor confirmado. ¿Es intencional para coincidir con la
-  convención del tablero, o es un defecto a corregir?]
+- **FR-021**: El panel DEBE mostrar el **estado físico de la válvula** (abierta/cerrada),
+  no el nivel eléctrico intercambiado con el nodo. La etapa de potencia del nodo remoto
+  opera con **lógica inversa por transistor**: nivel eléctrico 1 corresponde a válvula
+  cerrada y nivel 0 a válvula abierta. Esta inversión DEBE aplicarse en un único punto
+  de conversión con nombre explícito, documentado como característica del hardware y no
+  como defecto. *(Decisión 2026-08-20: confirmado por el responsable técnico; la
+  inversión observada en el firmware base es intencional.)*
+- **FR-021b**: La misma regla aplica al lado de las entradas: el nivel eléctrico leído del
+  tablero DEBE convertirse a intención del operador (abrir/cerrar) en un único punto, sin
+  que la lógica de control manipule niveles eléctricos crudos.
 - **FR-022**: Un fallo de la interfaz visual NO DEBE detener ni retrasar el control de
   válvulas.
 
@@ -313,6 +320,9 @@ de diferencias respecto al firmware vigente.
   sus válvulas. Es la única fuente de verdad sobre el estado real.
 - **Mapa de instalación**: conjunto de asociaciones entrada del tablero ↔ nodo ↔ válvula
   que define una finca concreta.
+- **Nivel eléctrico**: valor de señal intercambiado con el hardware (entrada del tablero o
+  etapa de potencia del nodo). Por diseño del hardware es **inverso** al estado físico de
+  la válvula. Nunca se expone a la lógica de control ni al panel sin convertir.
 
 ## Success Criteria *(mandatory)*
 
@@ -348,8 +358,12 @@ de diferencias respecto al firmware vigente.
   intentos, 60 min de reposo, watchdog de 8 s) se toman como correctos y se preservan como
   valores por defecto configurables.
 - El estado seguro de la instalación es la válvula cerrada.
+- La etapa de potencia de los nodos remotos opera con lógica inversa por transistor: el
+  nivel eléctrico 1 mantiene la válvula cerrada y el nivel 0 la abre. Esta inversión es
+  característica del hardware instalado y se conserva.
 - Las entradas del tablero se leen con resistencia de pull-up interna y el nivel bajo
-  representa la solicitud de apertura, tal como en el firmware actual.
+  representa la solicitud de apertura, tal como en el firmware actual (misma lógica
+  inversa que la etapa de potencia).
 - El tiempo de validación antibote (FR-002) no existe explícitamente en el firmware base;
   se adopta un valor por defecto conservador y se ajusta en banco.
 - El diagnóstico por consola es de solo lectura; no se contempla un intérprete de comandos
