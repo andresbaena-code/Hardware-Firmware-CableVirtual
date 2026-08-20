@@ -1,0 +1,21 @@
+# Compilados / binarios Arduino
+build/
+*.hex
+*.bin
+*.elf
+*.o
+*.a
+*.d
+
+# Comprimidos y respaldos
+*.rar
+*.zip
+*.7z
+*.bak
+*~
+
+# OneDrive / Windows
+Thumbs.db
+desktop.ini
+~$*
+.DS_Store
