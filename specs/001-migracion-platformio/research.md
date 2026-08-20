@@ -295,6 +295,47 @@ firmware antiguo. Esta tolerancia se documenta en el contrato del protocolo.
 
 ---
 
+## R-013 — Toolchain de pruebas en host sin instalar nada en el equipo
+
+**Decisión**: el entorno de pruebas `native` usa la plataforma **`windows_x86`** de
+PlatformIO, cuyo compilador (`toolchain-gccmingw32`, GCC 5.1) descarga y gestiona el
+propio PlatformIO. Se añade un entorno `native_posix` con `platform = native` para
+Linux y macOS.
+
+**Motivo**: el equipo de desarrollo no tiene ningún compilador de C++ instalado —ni
+MinGW, ni Visual Studio Build Tools, ni clang— y la plataforma `native` de PlatformIO
+depende del compilador del sistema. Sin esto, `pio test -e native` sería imposible de
+ejecutar y el Principio IV quedaría en el papel.
+
+**Verificación**: se comprobó en banco que GCC 5.1 acepta `constexpr` relajado de C++14
+con bucles y `static_assert` sobre él, que es lo que exige la validación del mapa de
+instalación (R-010). Las 70 pruebas del proyecto se ejecutan en 18 s.
+
+**Alternativas consideradas**:
+- *Instalar MinGW-w64 o Visual Studio Build Tools en el equipo.* Rechazado: obliga a cada
+  desarrollador a una instalación manual y hace que el proyecto deje de ser
+  autocontenido, contra el requisito FR-030 ("sin pasos manuales").
+- *Ejecutar las pruebas solo sobre la placa (`pio test -e megaatmega2560`).* Rechazado:
+  exige hardware conectado para cada verificación, que es exactamente el ciclo lento que
+  la migración pretende eliminar.
+
+---
+
+## R-014 — Tolerancia a un panel LCD caído
+
+**Decisión**: el bus I2C se configura con `Wire.setWireTimeout(3000, true)`.
+
+**Motivo**: sin límite de tiempo, la librería `Wire` de AVR espera **indefinidamente** a
+que el esclavo libere la línea. Un LCD desconectado o un bus en cortocircuito colgaría el
+lazo de control hasta que el watchdog reiniciara la placa, en un ciclo perpetuo de
+reinicios. Con el límite, la transferencia aborta en 3 ms, el adaptador cuenta el fallo y
+el control de válvulas sigue operando (FR-022, DP-03).
+
+Tras `kLcdMaxConsecutiveFailures` fallos seguidos el adaptador deja de intentar escribir y
+`healthy()` pasa a `false`, para que un bus caído no consuma presupuesto de ciclo.
+
+---
+
 ## Resumen de decisiones
 
 | Id | Decisión | Impacto |
@@ -311,3 +352,5 @@ firmware antiguo. Esta tolerancia se documenta en el contrato del protocolo.
 | R-010 | Mapa único con `static_assert` | el error de mapeo se detecta al compilar |
 | R-011 | Presupuesto de SRAM explícito | margen de pila garantizado |
 | R-012 | Payload de 5 bytes conservado byte a byte | nodos de campo intactos |
+| R-013 | Toolchain de host gestionado por PlatformIO | pruebas sin instalar nada |
+| R-014 | Límite de tiempo en el bus I2C | un LCD caído no cuelga el control |

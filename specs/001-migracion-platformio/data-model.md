@@ -118,17 +118,25 @@ asignación dinámica.
 |---|---|---|
 | `requested` | `ValveState` | lo que pide el tablero, ya filtrado por antirebote |
 | `confirmed` | `ValveState` | último estado confirmado por el nodo remoto |
-| `verified` | `bool` | `true` si `confirmed` responde a la solicitud vigente |
+| `phase` | `ValvePhase` | fase de la máquina de estados: `Verified`, `Pending`, `Awaiting` o `Backoff` |
 | `attempts` | `uint8_t` | intentos consumidos en el ciclo de reintento actual |
 | `nextAttemptAtMs` | `uint32_t` | marca de tiempo del próximo intento permitido |
-| `waiting` | `bool` | hay una espera activa (distingue "espera 0 ms" de "sin espera") |
 | `radioFailures` | `uint16_t` | contador acumulado de fallos, para diagnóstico (FR-028) |
 
-Tamaño estimado: 10 B por válvula, 240 B para 24 (R-011).
+Tamaño real medido: 10 B por válvula, 240 B para 24 (R-011).
 
-**Invariante R-01** (FR-005): `verified == true` **solo** puede establecerse al procesar una
-confirmación válida del nodo cuyo estado coincide con `requested`. Ninguna otra ruta puede
-marcarlo.
+> **Nota de implementación (2026-08-20).** El diseño inicial preveía dos banderas
+> separadas, `verified` y `waiting`. Al implementar la máquina de estados quedó claro que
+> ambas son proyecciones de una misma variable de fase, y que mantenerlas por separado
+> permite estados imposibles (`verified && waiting`). Se sustituyen por un único campo
+> `phase` con las cuatro fases del diagrama de la sección 4, y `verified()` pasa a ser una
+> consulta derivada (`phase == Verified`). El tamaño del registro no cambia y todas las
+> invariantes se conservan.
+
+**Invariante R-01** (FR-005): `phase` **solo** puede pasar a `Verified` desde `Awaiting` al
+procesar una confirmación válida del nodo cuyo estado coincide con `requested`. La única
+función que lo hace es `RetryPolicy::onConfirmed()`. *(La excepción es la siembra de
+arranque T1, que no transmite nada.)*
 
 **Invariante R-02** (FR-009): los registros son independientes. Ninguna operación sobre el
 registro *i* modifica el registro *j*.
@@ -151,12 +159,12 @@ comparación directa de marcas absolutas.
                     ▼                                          │
              ┌─────────────┐                                   │
    arranque  │  VERIFIED   │  requested == confirmed           │
-   (FR-010) ─▶  (en régimen)│  verified = true                  │
+   (FR-010) ─▶  (en régimen)│  phase = Verified                 │
              └──────┬──────┘                                   │
                     │                                          │
       la entrada estable cambia (FR-002, FR-008)               │
-      → requested = nuevo; verified = false;                   │
-        attempts = 0; waiting = false                          │
+      → requested = nuevo; phase = Pending;                    │
+        attempts = 0                                           │
                     │                                          │
                     ▼                                          │
              ┌─────────────┐                                   │
@@ -169,8 +177,8 @@ comparación directa de marcas absolutas.
                     ▼                                          │
              ┌─────────────┐   confirmación válida y coincide  │
              │  AWAITING   │───────────────────────────────────┘
-             │ (esperando  │   (FR-005) → verified = true;
-             │ confirmación)│              attempts = 0; waiting = false
+             │ (esperando  │   (FR-005) → phase = Verified;
+             │ confirmación)│              attempts = 0
              └──────┬──────┘
                     │  vence la espera sin confirmar
                     │
@@ -199,9 +207,9 @@ comparación directa de marcas absolutas.
 | # | Estado origen | Evento | Estado destino | Efectos | Requisito |
 |---|---|---|---|---|---|
 | T1 | *(arranque)* | siembra desde entradas físicas | `VERIFIED` | `requested = confirmed = lectura`; **no transmite** | FR-010 |
-| T2 | `VERIFIED` | entrada estable distinta | `PENDING` | `requested` nuevo; `verified=false`; `attempts=0` | FR-002, FR-003 |
+| T2 | `VERIFIED` | entrada estable distinta | `PENDING` | `requested` nuevo; `attempts=0` | FR-002, FR-003 |
 | T3 | `PENDING` | planificador concede turno | `AWAITING` | transmite; `attempts++`; espera `kRetryIntervalMs`; toma la ventana de exclusión | FR-004, FR-006 |
-| T4 | `AWAITING` | confirmación válida y coincidente | `VERIFIED` | `confirmed = requested`; `verified=true`; `attempts=0` | FR-005 |
+| T4 | `AWAITING` | confirmación válida y coincidente | `VERIFIED` | `confirmed = requested`; `attempts=0` | FR-005 |
 | T5 | `AWAITING` | confirmación válida pero **no** coincidente | `AWAITING` | no confirma; mantiene la secuencia | Caso borde |
 | T6 | `AWAITING` | vence espera, `attempts < kMaxAttempts` | `PENDING` | `radioFailures++` | FR-006 |
 | T7 | `AWAITING` | vence espera, `attempts == kMaxAttempts` | `BACKOFF` | `radioFailures++`; espera `kBackoffIntervalMs` | FR-007 |

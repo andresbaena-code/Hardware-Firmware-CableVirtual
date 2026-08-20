@@ -29,13 +29,13 @@ validar cada una de forma independiente.
 **Purpose**: dejar el proyecto PlatformIO en pie, con ambos entornos y las dependencias
 fijadas, y archivar el material heredado antes de tocar nada.
 
-- [ ] T001 Crear el esqueleto de directorios del proyecto (`src/`, `lib/wiga_config/`, `lib/wiga_domain/`, `lib/wiga_control/`, `lib/wiga_ports/`, `lib/wiga_hal/`, `test/`, `docs/`, `legacy/`) según la estructura de [plan.md](./plan.md)
-- [ ] T002 Crear `platformio.ini` con el entorno `megaatmega2560` (framework arduino, `-std=gnu++14` vía `build_unflags`/`build_flags`) y las dependencias fijadas `andrewrapp/XBee@0.0.0-alpha+sha.39f236ea18` y `marcoschwartz/LiquidCrystal_I2C@1.1.4` — cubre FR-030, R-001, R-007
-- [ ] T003 Añadir al `platformio.ini` el entorno `native` (`platform = native`, `test_framework = unity`) con `lib_ldf_mode = chain+` y `build_src_filter` que **excluya** `lib/wiga_hal`, de modo que la barrera de capas sea estructural — cubre FR-031, CP-03, Principio III
-- [ ] T004 [P] Mover sin modificar los tres sketches originales a `legacy/CABLE_VIRTUAL___LATCH_V1/`, `legacy/WIGA_24IN_LCD/` y `legacy/WIGA_24IN_LCDB1_5/` — cubre FR-033
-- [ ] T005 [P] Extender `.gitignore` con los artefactos de PlatformIO (`.pio/`, `.vscode/ipch/`, `compile_commands.json`)
-- [ ] T006 [P] Crear `.vscode/extensions.json` recomendando `platformio.platformio-ide`, para que VS Code proponga la extensión al abrir el repositorio — cubre SC-002
-- [ ] T007 Verificar que `pio run -e megaatmega2560` descarga las dependencias y compila un `src/main.cpp` vacío en un equipo limpio — cubre escenario 1 de [quickstart.md](./quickstart.md)
+- [X] T001 Crear el esqueleto de directorios del proyecto (`src/`, `lib/wiga_config/`, `lib/wiga_domain/`, `lib/wiga_control/`, `lib/wiga_ports/`, `lib/wiga_hal/`, `test/`, `docs/`, `legacy/`) según la estructura de [plan.md](./plan.md)
+- [X] T002 Crear `platformio.ini` con el entorno `megaatmega2560` (framework arduino, `-std=gnu++14` vía `build_unflags`/`build_flags`) y las dependencias fijadas `andrewrapp/XBee@0.0.0-alpha+sha.39f236ea18` y `marcoschwartz/LiquidCrystal_I2C@1.1.4` — cubre FR-030, R-001, R-007
+- [X] T003 Añadir al `platformio.ini` el entorno `native` (`platform = native`, `test_framework = unity`) con `lib_ldf_mode = chain+` y `build_src_filter` que **excluya** `lib/wiga_hal`, de modo que la barrera de capas sea estructural — cubre FR-031, CP-03, Principio III
+- [X] T004 [P] Mover sin modificar los tres sketches originales a `legacy/CABLE_VIRTUAL___LATCH_V1/`, `legacy/WIGA_24IN_LCD/` y `legacy/WIGA_24IN_LCDB1_5/` — cubre FR-033
+- [X] T005 [P] Extender `.gitignore` con los artefactos de PlatformIO (`.pio/`, `.vscode/ipch/`, `compile_commands.json`)
+- [X] T006 [P] Crear `.vscode/extensions.json` recomendando `platformio.platformio-ide`, para que VS Code proponga la extensión al abrir el repositorio — cubre SC-002
+- [X] T007 Verificar que `pio run -e megaatmega2560` descarga las dependencias y compila un `src/main.cpp` vacío en un equipo limpio — cubre escenario 1 de [quickstart.md](./quickstart.md)
 
 **Checkpoint**: el proyecto compila vacío y las dependencias se resuelven solas.
 
@@ -50,31 +50,31 @@ específico de una historia, y **todo** lo demás depende de ello.
 
 ### Tipos y configuración
 
-- [ ] T008 Implementar `lib/wiga_domain/valve_types.h` con `SignalLevel`, `ValveState`, `ValveIndex` y las funciones `constexpr toValveState()` / `toSignalLevel()` que aplican la lógica inversa por transistor — cubre FR-021, FR-021b, invariantes V-01/V-02
-- [ ] T009 Escribir `test/test_domain/test_valve_types.cpp` verificando la ida y vuelta de la conversión (V-01) y la tabla de inversión de [contracts/application-protocol.md §4](./contracts/application-protocol.md) — cubre FR-021
-- [ ] T010 [P] Implementar `lib/wiga_config/timing_config.h` con todas las constantes temporales de [data-model.md §2.2](./data-model.md), tipadas explícitamente y con unidad en el nombre, más los `static_assert` de C-05 y C-06 — cubre FR-023, R-005
-- [ ] T011 Implementar `lib/wiga_config/installation_map.h` con `ValveMapping`, el arreglo `constexpr kInstallation` transcrito de [contracts/installation-map.md §4](./contracts/installation-map.md) y `kValveCount` derivado con `sizeof` — cubre FR-023, FR-024, MAP-01, MAP-02
-- [ ] T012 Añadir a `lib/wiga_config/installation_map.h` las funciones `constexpr` de detección de duplicados y los seis `static_assert` MAP-V1..MAP-V6 con mensajes en español — cubre FR-025, C-01..C-04
-- [ ] T013 Escribir `test/test_domain/test_config.cpp` verificando que las funciones `constexpr` de detección devuelven el resultado correcto sobre mapas de ejemplo con y sin colisiones — cubre FR-025
+- [X] T008 Implementar `lib/wiga_domain/valve_types.h` con `SignalLevel`, `ValveState`, `ValveIndex` y las funciones `constexpr toValveState()` / `toSignalLevel()` que aplican la lógica inversa por transistor — cubre FR-021, FR-021b, invariantes V-01/V-02
+- [X] T009 Escribir `test/test_domain/test_valve_types.cpp` verificando la ida y vuelta de la conversión (V-01) y la tabla de inversión de [contracts/application-protocol.md §4](./contracts/application-protocol.md) — cubre FR-021
+- [X] T010 [P] Implementar `lib/wiga_config/timing_config.h` con todas las constantes temporales de [data-model.md §2.2](./data-model.md), tipadas explícitamente y con unidad en el nombre, más los `static_assert` de C-05 y C-06 — cubre FR-023, R-005
+- [X] T011 Implementar `lib/wiga_config/installation_map.h` con `ValveMapping`, el arreglo `constexpr kInstallation` transcrito de [contracts/installation-map.md §4](./contracts/installation-map.md) y `kValveCount` derivado con `sizeof` — cubre FR-023, FR-024, MAP-01, MAP-02
+- [X] T012 Añadir a `lib/wiga_config/installation_map.h` las funciones `constexpr` de detección de duplicados y los seis `static_assert` MAP-V1..MAP-V6 con mensajes en español — cubre FR-025, C-01..C-04
+- [X] T013 Escribir `test/test_domain/test_config.cpp` verificando que las funciones `constexpr` de detección devuelven el resultado correcto sobre mapas de ejemplo con y sin colisiones — cubre FR-025
 
 ### Protocolo de aplicación
 
-- [ ] T014 Implementar `lib/wiga_domain/app_protocol.h/.cpp` con `ValveCommand`, `ValveReport`, `encodeCommand()` (5 bytes con verificador) y `decodeReport()` con las validaciones RX-01..RX-04 — cubre FR-015, FR-016, R-012
-- [ ] T015 Escribir `test/test_domain/test_app_protocol.cpp` con los dos ejemplos normativos de [contracts/application-protocol.md §2](./contracts/application-protocol.md) (`AA 14 03 00 3E` y `AA 14 07 01 39`), el rechazo de tramas cortas, encabezado inválido, verificador incorrecto y nivel fuera de rango, y la aceptación tolerante de tramas de 4 bytes (RX-03) — cubre FR-015, FR-016, P-01, P-02
+- [X] T014 Implementar `lib/wiga_domain/app_protocol.h/.cpp` con `ValveCommand`, `ValveReport`, `encodeCommand()` (5 bytes con verificador) y `decodeReport()` con las validaciones RX-01..RX-04 — cubre FR-015, FR-016, R-012
+- [X] T015 Escribir `test/test_domain/test_app_protocol.cpp` con los dos ejemplos normativos de [contracts/application-protocol.md §2](./contracts/application-protocol.md) (`AA 14 03 00 3E` y `AA 14 07 01 39`), el rechazo de tramas cortas, encabezado inválido, verificador incorrecto y nivel fuera de rango, y la aceptación tolerante de tramas de 4 bytes (RX-03) — cubre FR-015, FR-016, P-01, P-02
 
 ### Puertos y dobles de prueba
 
-- [ ] T016 [P] Declarar `lib/wiga_ports/i_clock.h` según [contracts/ports.md §1](./contracts/ports.md)
-- [ ] T017 [P] Declarar `lib/wiga_ports/i_digital_input_port.h` según [contracts/ports.md §2](./contracts/ports.md)
-- [ ] T018 [P] Declarar `lib/wiga_ports/i_radio_port.h` según [contracts/ports.md §3](./contracts/ports.md)
-- [ ] T019 [P] Declarar `lib/wiga_ports/i_display_port.h` según [contracts/ports.md §4](./contracts/ports.md)
-- [ ] T020 [P] Declarar `lib/wiga_ports/i_watchdog_port.h` según [contracts/ports.md §5](./contracts/ports.md)
-- [ ] T021 [P] Declarar `lib/wiga_ports/i_log_port.h` con `LogLevel` y los ocho tags obligatorios según [contracts/ports.md §6](./contracts/ports.md) — cubre FR-026, FR-027, FR-028
-- [ ] T022 [P] Implementar `test/mocks/fake_clock.h` con avance manual del tiempo, capaz de posicionarse cerca del desbordamiento de 32 bits
-- [ ] T023 [P] Implementar `test/mocks/fake_inputs.h` con niveles fijados por prueba y capacidad de simular rebote
-- [ ] T024 [P] Implementar `test/mocks/fake_radio.h` que registra órdenes transmitidas, permite encolar confirmaciones arbitrarias (válidas, corruptas y de nodos desconocidos) y **falla la prueba si alguien intenta vaciar el búfer** — cubre FR-018, RD-02
-- [ ] T025 [P] Implementar `test/mocks/fake_display.h` que expone el buffer para aserciones y `test/mocks/fake_watchdog.h` que cuenta invocaciones de `feed()` — cubre WD-03
-- [ ] T026 [P] Implementar `test/mocks/fake_log.h` que acumula eventos para aserciones
+- [X] T016 [P] Declarar `lib/wiga_ports/i_clock.h` según [contracts/ports.md §1](./contracts/ports.md)
+- [X] T017 [P] Declarar `lib/wiga_ports/i_digital_input_port.h` según [contracts/ports.md §2](./contracts/ports.md)
+- [X] T018 [P] Declarar `lib/wiga_ports/i_radio_port.h` según [contracts/ports.md §3](./contracts/ports.md)
+- [X] T019 [P] Declarar `lib/wiga_ports/i_display_port.h` según [contracts/ports.md §4](./contracts/ports.md)
+- [X] T020 [P] Declarar `lib/wiga_ports/i_watchdog_port.h` según [contracts/ports.md §5](./contracts/ports.md)
+- [X] T021 [P] Declarar `lib/wiga_ports/i_log_port.h` con `LogLevel` y los ocho tags obligatorios según [contracts/ports.md §6](./contracts/ports.md) — cubre FR-026, FR-027, FR-028
+- [X] T022 [P] Implementar `test/mocks/fake_clock.h` con avance manual del tiempo, capaz de posicionarse cerca del desbordamiento de 32 bits
+- [X] T023 [P] Implementar `test/mocks/fake_inputs.h` con niveles fijados por prueba y capacidad de simular rebote
+- [X] T024 [P] Implementar `test/mocks/fake_radio.h` que registra órdenes transmitidas, permite encolar confirmaciones arbitrarias (válidas, corruptas y de nodos desconocidos) y **falla la prueba si alguien intenta vaciar el búfer** — cubre FR-018, RD-02
+- [X] T025 [P] Implementar `test/mocks/fake_display.h` que expone el buffer para aserciones y `test/mocks/fake_watchdog.h` que cuenta invocaciones de `feed()` — cubre WD-03
+- [X] T026 [P] Implementar `test/mocks/fake_log.h` que acumula eventos para aserciones
 
 **Checkpoint**: tipos, configuración validada, protocolo probado y todos los puertos con su
 doble. Las historias de usuario pueden comenzar.
@@ -87,10 +87,10 @@ doble. Las historias de usuario pueden comenzar.
 
 **Independent Test**: escenario 1 de [quickstart.md](./quickstart.md) en un equipo limpio.
 
-- [ ] T027 [US2] Crear `lib/wiga_hal/firmware_version.h` con la versión semántica del firmware y las macros `__DATE__`/`__TIME__` de compilación, con las cadenas en Flash — cubre FR-026, LG-03
-- [ ] T028 [US2] Crear `src/main.cpp` como raíz de composición con `setup()`/`loop()` mínimos que inicializan la consola y emiten el evento `VER` al arrancar — cubre FR-026, CP-01, CP-02
-- [ ] T029 [US2] Verificar `pio run -e megaatmega2560` y registrar el reporte de RAM y Flash; confirmar RAM < 75 % — cubre FR-030, NFR-001
-- [ ] T030 [US2] Escribir `docs/puesta-en-marcha.md` con requisitos del entorno, clonado, compilación, carga y solución de problemas frecuentes — cubre FR-034, SC-002
+- [X] T027 [US2] Crear `lib/wiga_hal/firmware_version.h` con la versión semántica del firmware y las macros `__DATE__`/`__TIME__` de compilación, con las cadenas en Flash — cubre FR-026, LG-03
+- [X] T028 [US2] Crear `src/main.cpp` como raíz de composición con `setup()`/`loop()` mínimos que inicializan la consola y emiten el evento `VER` al arrancar — cubre FR-026, CP-01, CP-02
+- [X] T029 [US2] Verificar `pio run -e megaatmega2560` y registrar el reporte de RAM y Flash; confirmar RAM < 75 % — cubre FR-030, NFR-001
+- [X] T030 [US2] Escribir `docs/puesta-en-marcha.md` con requisitos del entorno, clonado, compilación, carga y solución de problemas frecuentes — cubre FR-034, SC-002
 
 **Checkpoint**: cualquiera puede compilar y cargar el firmware; arranca e identifica su versión.
 
@@ -105,26 +105,26 @@ reintentos acotados y confirmación obligatoria.
 
 ### Lógica de control (con sus pruebas, Principio IV)
 
-- [ ] T031 [P] [US1] Implementar `lib/wiga_control/debouncer.h/.cpp` con el filtro de estabilidad por entrada e invariantes D-01/D-02 — cubre FR-002
-- [ ] T032 [P] [US1] Escribir `test/test_control/test_debouncer.cpp`: un cambio sostenido `kDebounceMs` se acepta; una oscilación más corta se rechaza y reinicia la ventana — cubre FR-002
-- [ ] T033 [P] [US1] Implementar `lib/wiga_domain/valve_record.h` con los siete campos de [data-model.md §3](./data-model.md) e invariantes R-01..R-04 — cubre FR-009
-- [ ] T034 [US1] Implementar `lib/wiga_control/retry_policy.h/.cpp` con intentos acotados, intervalo corto, reposo prolongado y cancelación por cambio de entrada, usando `(uint32_t)(now - mark)` en toda comparación — cubre FR-006, FR-007, FR-008, FR-013
-- [ ] T035 [US1] Escribir `test/test_control/test_retry_policy.cpp`: exactamente 5 intentos separados 30 s, transición a reposo de 60 min al agotarlos, y cancelación inmediata del reposo al cambiar la entrada — cubre FR-006, FR-007, FR-008
-- [ ] T036 [US1] Implementar `lib/wiga_control/latch_scheduler.h/.cpp` con la ventana de exclusión y el barrido circular desde `lastServed + 1` — cubre FR-004, invariantes S-01, S-02
-- [ ] T037 [US1] Escribir `test/test_control/test_scheduler.cpp`: nunca concede dos turnos dentro de `kLatchGuardMs`, y con varias válvulas candidatas reparte los turnos de forma circular en lugar de favorecer siempre la de índice menor — cubre FR-004, S-02
-- [ ] T038 [US1] Implementar `lib/wiga_control/valve_supervisor.h/.cpp` con la máquina de estados de las 11 transiciones T1..T11 de [data-model.md §4](./data-model.md), orquestando entradas, filtro, política, planificador, radio y panel a través de los puertos — cubre FR-001, FR-003, FR-005, FR-009, FR-010, FR-011, FR-017
-- [ ] T039 [US1] Escribir `test/test_integration/test_supervisor.cpp` cubriendo las 11 transiciones contra los dobles, incluida T11 (la orden se cancela si la entrada vuelve antes del turno) y T5 (confirmación con nivel distinto no confirma) — cubre FR-003, FR-005, T1..T11
-- [ ] T040 [US1] Escribir `test/test_integration/test_no_burst_on_boot.cpp`: tras sembrar el estado desde entradas físicas, el supervisor no transmite ninguna orden — cubre FR-010, Principio II
-- [ ] T041 [US1] Escribir `test/test_integration/test_fault_isolation.cpp`: una válvula en reposo prolongado no impide que las otras 23 sean atendidas sin retraso — cubre FR-009
+- [X] T031 [P] [US1] Implementar `lib/wiga_control/debouncer.h/.cpp` con el filtro de estabilidad por entrada e invariantes D-01/D-02 — cubre FR-002
+- [X] T032 [P] [US1] Escribir `test/test_control/test_debouncer.cpp`: un cambio sostenido `kDebounceMs` se acepta; una oscilación más corta se rechaza y reinicia la ventana — cubre FR-002
+- [X] T033 [P] [US1] Implementar `lib/wiga_domain/valve_record.h` con los siete campos de [data-model.md §3](./data-model.md) e invariantes R-01..R-04 — cubre FR-009
+- [X] T034 [US1] Implementar `lib/wiga_control/retry_policy.h/.cpp` con intentos acotados, intervalo corto, reposo prolongado y cancelación por cambio de entrada, usando `(uint32_t)(now - mark)` en toda comparación — cubre FR-006, FR-007, FR-008, FR-013
+- [X] T035 [US1] Escribir `test/test_control/test_retry_policy.cpp`: exactamente 5 intentos separados 30 s, transición a reposo de 60 min al agotarlos, y cancelación inmediata del reposo al cambiar la entrada — cubre FR-006, FR-007, FR-008
+- [X] T036 [US1] Implementar `lib/wiga_control/latch_scheduler.h/.cpp` con la ventana de exclusión y el barrido circular desde `lastServed + 1` — cubre FR-004, invariantes S-01, S-02
+- [X] T037 [US1] Escribir `test/test_control/test_scheduler.cpp`: nunca concede dos turnos dentro de `kLatchGuardMs`, y con varias válvulas candidatas reparte los turnos de forma circular en lugar de favorecer siempre la de índice menor — cubre FR-004, S-02
+- [X] T038 [US1] Implementar `lib/wiga_control/valve_supervisor.h/.cpp` con la máquina de estados de las 11 transiciones T1..T11 de [data-model.md §4](./data-model.md), orquestando entradas, filtro, política, planificador, radio y panel a través de los puertos — cubre FR-001, FR-003, FR-005, FR-009, FR-010, FR-011, FR-017
+- [X] T039 [US1] Escribir `test/test_integration/test_supervisor.cpp` cubriendo las 11 transiciones contra los dobles, incluida T11 (la orden se cancela si la entrada vuelve antes del turno) y T5 (confirmación con nivel distinto no confirma) — cubre FR-003, FR-005, T1..T11
+- [X] T040 [US1] Escribir `test/test_integration/test_no_burst_on_boot.cpp`: tras sembrar el estado desde entradas físicas, el supervisor no transmite ninguna orden — cubre FR-010, Principio II
+- [X] T041 [US1] Escribir `test/test_integration/test_fault_isolation.cpp`: una válvula en reposo prolongado no impide que las otras 23 sean atendidas sin retraso — cubre FR-009
 
 ### Adaptadores de hardware
 
-- [ ] T042 [P] [US1] Implementar `lib/wiga_hal/arduino_clock.h/.cpp` sobre `millis()` — cubre CLK-01..CLK-03
-- [ ] T043 [P] [US1] Implementar `lib/wiga_hal/arduino_digital_input.h/.cpp` con `INPUT_PULLUP` sobre los pines del mapa, devolviendo `SignalLevel` crudo — cubre FR-001, IN-01..IN-04
-- [ ] T044 [US1] Implementar `lib/wiga_hal/xbee_radio_adapter.h/.cpp`: `send()` **sin vaciar el búfer de recepción**, y `poll()` que invoca `readPacket()` en bucle hasta agotar el búfer o alcanzar `kMaxFramesPerPoll` — cubre FR-014, FR-017, FR-018, RD-01..RD-07, R-002, R-003
-- [ ] T045 [P] [US1] Implementar `lib/wiga_hal/avr_watchdog.h/.cpp` con `wdt_disable()`, `wdt_enable(WDTO_8S)` y `wdt_reset()` — cubre FR-012, WD-01..WD-04
-- [ ] T046 [US1] Cablear en `src/main.cpp` la composición completa: instanciar adaptadores, inyectarlos en `ValveSupervisor` y ejecutar el lazo `feed watchdog → supervisor.tick() → display.tick()`, sin `delay()` — cubre FR-011, FR-012, CP-01, CP-02
-- [ ] T047 [US1] Verificar en banco los escenarios 7, 8 y 9 de [quickstart.md](./quickstart.md) y registrar la tabla de 24 entradas — cubre SC-001, SC-005, NFR-003
+- [X] T042 [P] [US1] Implementar `lib/wiga_hal/arduino_clock.h/.cpp` sobre `millis()` — cubre CLK-01..CLK-03
+- [X] T043 [P] [US1] Implementar `lib/wiga_hal/arduino_digital_input.h/.cpp` con `INPUT_PULLUP` sobre los pines del mapa, devolviendo `SignalLevel` crudo — cubre FR-001, IN-01..IN-04
+- [X] T044 [US1] Implementar `lib/wiga_hal/xbee_radio_adapter.h/.cpp`: `send()` **sin vaciar el búfer de recepción**, y `poll()` que invoca `readPacket()` en bucle hasta agotar el búfer o alcanzar `kMaxFramesPerPoll` — cubre FR-014, FR-017, FR-018, RD-01..RD-07, R-002, R-003
+- [X] T045 [P] [US1] Implementar `lib/wiga_hal/avr_watchdog.h/.cpp` con `wdt_disable()`, `wdt_enable(WDTO_8S)` y `wdt_reset()` — cubre FR-012, WD-01..WD-04
+- [X] T046 [US1] Cablear en `src/main.cpp` la composición completa: instanciar adaptadores, inyectarlos en `ValveSupervisor` y ejecutar el lazo `feed watchdog → supervisor.tick() → display.tick()`, sin `delay()` — cubre FR-011, FR-012, CP-01, CP-02
+- [X] T047 [US1] Verificar en banco los escenarios 7, 8 y 9 de [quickstart.md](./quickstart.md) y registrar la tabla de 24 entradas — cubre SC-001, SC-005, NFR-003
 
 **Checkpoint**: MVP funcional. El sistema replica el tablero en campo con protección de batería.
 
@@ -136,10 +136,10 @@ reintentos acotados y confirmación obligatoria.
 
 **Independent Test**: escenarios 2 y 3 de [quickstart.md](./quickstart.md).
 
-- [ ] T048 [US3] Escribir `test/test_control/test_time_wraparound.cpp` posicionando el reloj falso cerca de `0xFFFFFFFF` y comprobando que ninguna espera se alarga ni se dispara al desbordar — cubre FR-013, NFR-002, invariante R-04
-- [ ] T049 [US3] Verificar el escenario 3: añadir temporalmente `#include <Arduino.h>` en `lib/wiga_control/valve_supervisor.h` y confirmar que `pio test -e native` **falla**; revertir y confirmar que pasa — cubre Principio III, CP-03
-- [ ] T050 [US3] Medir el tiempo total de `pio test -e native` y confirmar que es inferior a 30 s; si no, identificar y corregir la prueba lenta — cubre SC-003
-- [ ] T051 [US3] Añadir a `docs/puesta-en-marcha.md` la sección de ejecución de pruebas y la explicación de por qué `wiga_hal` no se compila en `native` — cubre FR-034
+- [X] T048 [US3] Escribir `test/test_control/test_time_wraparound.cpp` posicionando el reloj falso cerca de `0xFFFFFFFF` y comprobando que ninguna espera se alarga ni se dispara al desbordar — cubre FR-013, NFR-002, invariante R-04
+- [X] T049 [US3] Verificar el escenario 3: añadir temporalmente `#include <Arduino.h>` en `lib/wiga_control/valve_supervisor.h` y confirmar que `pio test -e native` **falla**; revertir y confirmar que pasa — cubre Principio III, CP-03
+- [X] T050 [US3] Medir el tiempo total de `pio test -e native` y confirmar que es inferior a 30 s; si no, identificar y corregir la prueba lenta — cubre SC-003
+- [X] T051 [US3] Añadir a `docs/puesta-en-marcha.md` la sección de ejecución de pruebas y la explicación de por qué `wiga_hal` no se compila en `native` — cubre FR-034
 
 **Checkpoint**: la lógica es verificable en segundos, sin hardware, y la barrera de capas está demostrada.
 
@@ -151,9 +151,9 @@ reintentos acotados y confirmación obligatoria.
 
 **Independent Test**: escenarios 4 y 5 de [quickstart.md](./quickstart.md).
 
-- [ ] T052 [US4] Verificar el escenario 4: duplicar un pin y confirmar el fallo de compilación con `pin de entrada duplicado en el mapa`; repetir con un par (dirección, id) duplicado; revertir — cubre FR-025, MAP-V3, MAP-V4
+- [X] T052 [US4] Verificar el escenario 4: duplicar un pin y confirmar el fallo de compilación con `pin de entrada duplicado en el mapa`; repetir con un par (dirección, id) duplicado; revertir — cubre FR-025, MAP-V3, MAP-V4
 - [ ] T053 [US4] Verificar el escenario 5: sustituir `kInstallation` por un mapa de prueba de 6 válvulas, comprobar que compila y que las pruebas pasan, y que `git diff --name-only` lista **un solo archivo** — cubre FR-023, FR-024, SC-004, MAP-04
-- [ ] T054 [US4] Escribir `docs/configuracion-finca.md` con el procedimiento de seis pasos de [contracts/installation-map.md §5](./contracts/installation-map.md), incluida la lectura de `SH`/`SL` del XBee — cubre FR-034
+- [X] T054 [US4] Escribir `docs/configuracion-finca.md` con el procedimiento de seis pasos de [contracts/installation-map.md §5](./contracts/installation-map.md), incluida la lectura de `SH`/`SL` del XBee — cubre FR-034
 - [ ] T055 [US4] Contrastar el mapa heredado contra el plano de la finca, con atención a las seis entradas del nodo `0x41C3F595` (ids 2..6, patrón distinto al resto) y dejar constancia del resultado en `docs/configuracion-finca.md` — cubre R-010, riesgo del plan
 
 **Checkpoint**: una finca nueva se configura sin tocar lógica, y el mapa heredado está verificado.
@@ -167,12 +167,12 @@ con solo la consola serie.
 
 **Independent Test**: escenario 6 de [quickstart.md](./quickstart.md).
 
-- [ ] T056 [P] [US5] Implementar `lib/wiga_hal/reset_cause.h/.cpp` capturando `MCUSR` en `.init3` mediante `__attribute__((naked, used, section(".init3")))` y guardándolo en `.noinit` — cubre FR-026, R-008
-- [ ] T057 [P] [US5] Implementar `lib/wiga_hal/serial_log.h/.cpp` con formato de campos fijos, cadenas en Flash, escritura no bloqueante y compilación condicional por `WIGA_LOG_LEVEL` — cubre FR-027, FR-029, LG-01..LG-04
-- [ ] T058 [US5] Emitir desde `src/main.cpp` y `ValveSupervisor` los ocho eventos del catálogo (`BOOT`, `VER`, `TX`, `ACK`, `TMO`, `BACK`, `DROP`, `LCD`) en sus puntos correspondientes — cubre FR-026, FR-027, FR-028
-- [ ] T059 [US5] Añadir el contador `radioFailures` por válvula y su exposición en el evento `BACK` — cubre FR-028
-- [ ] T060 [US5] Verificar que compilar con `-D WIGA_LOG_LEVEL=0` elimina las trazas sin alterar el tamaño ni el comportamiento de la lógica de control, y registrar la diferencia de Flash — cubre FR-029, LG-02
-- [ ] T061 [US5] Escribir `docs/diagnostico.md` con el catálogo de eventos, tres fallos típicos y cómo distinguir problema de radio, de entrada o de válvula — cubre FR-034, SC-007
+- [X] T056 [P] [US5] Implementar `lib/wiga_hal/reset_cause.h/.cpp` capturando `MCUSR` en `.init3` mediante `__attribute__((naked, used, section(".init3")))` y guardándolo en `.noinit` — cubre FR-026, R-008
+- [X] T057 [P] [US5] Implementar `lib/wiga_hal/serial_log.h/.cpp` con formato de campos fijos, cadenas en Flash, escritura no bloqueante y compilación condicional por `WIGA_LOG_LEVEL` — cubre FR-027, FR-029, LG-01..LG-04
+- [X] T058 [US5] Emitir desde `src/main.cpp` y `ValveSupervisor` los ocho eventos del catálogo (`BOOT`, `VER`, `TX`, `ACK`, `TMO`, `BACK`, `DROP`, `LCD`) en sus puntos correspondientes — cubre FR-026, FR-027, FR-028
+- [X] T059 [US5] Añadir el contador `radioFailures` por válvula y su exposición en el evento `BACK` — cubre FR-028
+- [X] T060 [US5] Verificar que compilar con `-D WIGA_LOG_LEVEL=0` elimina las trazas sin alterar el tamaño ni el comportamiento de la lógica de control, y registrar la diferencia de Flash — cubre FR-029, LG-02
+- [X] T061 [US5] Escribir `docs/diagnostico.md` con el catálogo de eventos, tres fallos típicos y cómo distinguir problema de radio, de entrada o de válvula — cubre FR-034, SC-007
 - [ ] T062 [US5] Documentar en `docs/diagnostico.md` la limitación conocida de `optiboot` sobre `MCUSR`, verificando primero en banco si el flag de watchdog llega o no — cubre R-008
 
 **Checkpoint**: la consola cuenta lo que hace el firmware y el técnico puede seguirla.
@@ -185,8 +185,8 @@ con solo la consola serie.
 
 **Independent Test**: localizar los sketches archivados y su documento de diferencias.
 
-- [ ] T063 [US6] Escribir `legacy/README.md` indicando, por cada sketch archivado, a qué instalación corresponde, en qué se diferencia del firmware vigente y por qué no se migró — cubre FR-033
-- [ ] T064 [US6] Documentar en `legacy/README.md` los defectos identificados en las versiones antiguas (`WIGA_24IN_LCDB1_5` declara el LCD como 16x3 pero escribe 4 filas, y `mapear()` recorre `sizeof(direcciones)` en vez del número de elementos) para que nadie los reintroduzca — cubre FR-033
+- [X] T063 [US6] Escribir `legacy/README.md` indicando, por cada sketch archivado, a qué instalación corresponde, en qué se diferencia del firmware vigente y por qué no se migró — cubre FR-033
+- [X] T064 [US6] Documentar en `legacy/README.md` los defectos identificados en las versiones antiguas (`WIGA_24IN_LCDB1_5` declara el LCD como 16x3 pero escribe 4 filas, y `mapear()` recorre `sizeof(direcciones)` en vez del número de elementos) para que nadie los reintroduzca — cubre FR-033
 
 **Checkpoint**: el legado está preservado y explicado, sin cargar mantenimiento.
 
@@ -196,14 +196,14 @@ con solo la consola serie.
 
 **Purpose**: la interfaz visual y los cierres que cruzan varias historias.
 
-- [ ] T065 Implementar `lib/wiga_hal/lcd_display_adapter.h/.cpp` con buffer de sombra 4×20, marcas de suciedad, escritura de `kDisplayCellsPerTick` celdas por `tick()`, bus I2C a 400 kHz y `healthy()` tras fallos consecutivos — cubre FR-019, FR-022, R-007, DP-01..DP-05, invariantes B-01, B-02
-- [ ] T066 Mapear en `ValveSupervisor` los cuatro símbolos del panel (`0`, `1`, `?`, `!`) derivados del **estado físico**, según [data-model.md §7.1](./data-model.md) — cubre FR-019, FR-020, FR-021, NV-02
+- [X] T065 Implementar `lib/wiga_hal/lcd_display_adapter.h/.cpp` con buffer de sombra 4×20, marcas de suciedad, escritura de `kDisplayCellsPerTick` celdas por `tick()`, bus I2C a 400 kHz y `healthy()` tras fallos consecutivos — cubre FR-019, FR-022, R-007, DP-01..DP-05, invariantes B-01, B-02
+- [X] T066 Mapear en `ValveSupervisor` los cuatro símbolos del panel (`0`, `1`, `?`, `!`) derivados del **estado físico**, según [data-model.md §7.1](./data-model.md) — cubre FR-019, FR-020, FR-021, NV-02
 - [ ] T067 Verificar el escenario 10 en banco: instrumentar el tiempo de ciclo y confirmar que ninguna vuelta supera 2 ms con tráfico de radio y refresco de panel activos — cubre Principio I, FR-011
 - [ ] T068 Verificar que el fallo del panel (desconectar el LCD en caliente) no detiene ni retrasa el control de válvulas — cubre FR-022, DP-03
-- [ ] T069 [P] Anotar en cada módulo el comentario de cabecera con los `FR-xxx` que implementa, y en cada prueba el `FR-xxx` que verifica — cubre FR-032, Principio VII
-- [ ] T070 [P] Escribir `README.md` en la raíz: qué es el sistema, arquitectura en una imagen, cómo compilar, cómo probar y dónde está cada cosa — cubre FR-034
+- [X] T069 [P] Anotar en cada módulo el comentario de cabecera con los `FR-xxx` que implementa, y en cada prueba el `FR-xxx` que verifica — cubre FR-032, Principio VII
+- [X] T070 [P] Escribir `README.md` en la raíz: qué es el sistema, arquitectura en una imagen, cómo compilar, cómo probar y dónde está cada cosa — cubre FR-034
 - [ ] T071 Ejecutar la revisión de cumplimiento constitucional: verificar explícitamente Principios I, II y IV sobre el código final, y registrar el resultado — puerta de calidad 3 de la constitución
-- [ ] T072 Registrar el uso final de RAM y Flash y confirmar RAM < 75 % — cubre NFR-001
+- [X] T072 Registrar el uso final de RAM y Flash y confirmar RAM < 75 % — cubre NFR-001
 - [ ] T073 Publicar la rama en `https://github.com/andresbaena-code/Hardware-Firmware-CableVirtual` y abrir el pull request hacia `main` con el resumen de la migración
 
 ---
