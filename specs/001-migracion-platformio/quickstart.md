@@ -249,6 +249,9 @@ campo.
 | 10 — Presupuesto del lazo | banco | Principio I, FR-011 |
 | 11 — Operación prolongada | campo | NFR-002, SC-006 |
 
+Para los escenarios de banco existe un formulario imprimible con las tablas ya
+preparadas: [docs/acta-pruebas-banco.md](../../docs/acta-pruebas-banco.md).
+
 **Criterio de aceptación de la funcionalidad**: escenarios 1 a 5 en verde antes de
 integrar a `main`; escenarios 6 a 10 en verde antes de sustituir firmware en una
 instalación productiva; escenario 11 como seguimiento posterior.

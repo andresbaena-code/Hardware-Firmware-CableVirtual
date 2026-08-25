@@ -200,12 +200,14 @@ con solo la consola serie.
 
 - [X] T065 Implementar `lib/wiga_hal/lcd_display_adapter.h/.cpp` con buffer de sombra 4×20, marcas de suciedad, escritura de `kDisplayCellsPerTick` celdas por `tick()`, bus I2C a 400 kHz y `healthy()` tras fallos consecutivos — cubre FR-019, FR-022, R-007, DP-01..DP-05, invariantes B-01, B-02
 - [X] T066 Mapear en `ValveSupervisor` los cuatro símbolos del panel (`0`, `1`, `?`, `!`) derivados del **estado físico**, según [data-model.md §7.1](./data-model.md) — cubre FR-019, FR-020, FR-021, NV-02
-- [ ] T067 Verificar el escenario 10 en banco: instrumentar el tiempo de ciclo y confirmar que ninguna vuelta supera 2 ms con tráfico de radio y refresco de panel activos — cubre Principio I, FR-011
-- [ ] T068 Verificar que el fallo del panel (desconectar el LCD en caliente) no detiene ni retrasa el control de válvulas — cubre FR-022, DP-03
+- [ ] T067 Verificar el escenario 10 en banco (usar [docs/acta-pruebas-banco.md](../../docs/acta-pruebas-banco.md), bloque 5): instrumentar el tiempo de ciclo y confirmar que ninguna vuelta supera 2 ms con tráfico de radio y refresco de panel activos — cubre Principio I, FR-011
+- [ ] T068 Verificar (acta, bloque 5.1) que el fallo del panel (desconectar el LCD en caliente) no detiene ni retrasa el control de válvulas — cubre FR-022, DP-03
 - [X] T069 [P] Anotar en cada módulo el comentario de cabecera con los `FR-xxx` que implementa, y en cada prueba el `FR-xxx` que verifica — cubre FR-032, Principio VII
 - [X] T070 [P] Escribir `README.md` en la raíz: qué es el sistema, arquitectura en una imagen, cómo compilar, cómo probar y dónde está cada cosa — cubre FR-034
 - [ ] T071 Ejecutar la revisión de cumplimiento constitucional: verificar explícitamente Principios I, II y IV sobre el código final, y registrar el resultado — puerta de calidad 3 de la constitución
 - [X] T072 Registrar el uso final de RAM y Flash y confirmar RAM < 75 % — cubre NFR-001
+- [X] T074 Crear `.github/workflows/ci.yml` con las tres puertas de calidad automatizadas: pruebas en host, compilación con verificación de RAM < 75 %, y comprobación de que la barrera de capas es estructural — cubre NFR-001, FR-029, FR-031, Principios III y IV
+- [X] T075 Crear `docs/acta-pruebas-banco.md`, formulario de aceptación para los escenarios 6 a 10, con el bloque 0 bloqueante sobre compatibilidad del payload — cubre SC-001, SC-005, R-012
 - [ ] T073 Publicar la rama en `https://github.com/andresbaena-code/Hardware-Firmware-CableVirtual` y abrir el pull request hacia `main` con el resumen de la migración
 
 ---

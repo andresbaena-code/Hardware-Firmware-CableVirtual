@@ -133,7 +133,8 @@ limitación, no un defecto del diagnóstico. El control de válvulas no depende 
 Para compilar sin trazas:
 
 ```bash
-pio run -e megaatmega2560 -a "-DWIGA_LOG_LEVEL=0"
+cd CABLE_VIRTUAL_V2_PIO
+pio run -e megaatmega2560_silent
 ```
 
 Ahorra unos 790 bytes de Flash y 104 de RAM, y **no cambia nada más** del comportamiento.

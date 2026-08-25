@@ -135,6 +135,7 @@ Nada entra al código sin una especificación asociada.
 | [Modelo de datos](specs/001-migracion-platformio/data-model.md) | entidades, invariantes y las 11 transiciones |
 | [Contratos](specs/001-migracion-platformio/contracts/) | protocolo con los nodos, puertos, mapa de finca |
 | [Validación](specs/001-migracion-platformio/quickstart.md) | 11 escenarios de aceptación |
+| [Acta de pruebas de banco](docs/acta-pruebas-banco.md) | formulario para firmar antes de sustituir firmware en producción |
 | [Tareas](specs/001-migracion-platformio/tasks.md) | descomposición del trabajo |
 
 ## Licencia

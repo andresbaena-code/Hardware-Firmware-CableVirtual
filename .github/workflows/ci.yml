@@ -1,0 +1,136 @@
+name: CI
+
+# Convierte en automáticas las puertas de calidad de la constitución del proyecto
+# (.specify/memory/constitution.md, "Flujo de Desarrollo y Puertas de Calidad").
+# Si alguna falla, el cambio no debe integrarse a main.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  PIO_PROJECT_DIR: CABLE_VIRTUAL_V2_PIO
+  # NFR-001: la RAM ocupada debe quedar por debajo del 75 %, para dejar margen de pila.
+  MAX_RAM_PERCENT: "75"
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # Puerta 2: pio test -e native pasa en su totalidad (Principio IV, FR-031).
+  # ---------------------------------------------------------------------------
+  pruebas-en-host:
+    name: Pruebas en host (sin hardware)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cachear PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.cache/pip
+          key: pio-native-${{ runner.os }}-${{ hashFiles('**/platformio.ini') }}
+
+      - name: Instalar PlatformIO Core
+        run: pip install --upgrade platformio
+
+      - name: Ejecutar la suite completa
+        working-directory: ${{ env.PIO_PROJECT_DIR }}
+        run: pio test -e native_posix
+
+  # ---------------------------------------------------------------------------
+  # Puerta 1 y 3: compila sin errores y el uso de memoria queda registrado.
+  # ---------------------------------------------------------------------------
+  compilacion-mega:
+    name: Compilación Arduino Mega 2560
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cachear PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.platformio/packages
+            ~/.platformio/platforms
+            ~/.cache/pip
+          key: pio-avr-${{ runner.os }}-${{ hashFiles('**/platformio.ini') }}
+
+      - name: Instalar PlatformIO Core
+        run: pip install --upgrade platformio
+
+      - name: Compilar
+        working-directory: ${{ env.PIO_PROJECT_DIR }}
+        run: pio run -e megaatmega2560 2>&1 | tee build.log
+
+      - name: Verificar el presupuesto de memoria (NFR-001)
+        working-directory: ${{ env.PIO_PROJECT_DIR }}
+        run: python ../.github/scripts/check_memory.py build.log "${{ env.MAX_RAM_PERCENT }}"
+
+      - name: Comprobar que las trazas se compilan fuera (FR-029)
+        working-directory: ${{ env.PIO_PROJECT_DIR }}
+        run: pio run -e megaatmega2560_silent
+
+  # ---------------------------------------------------------------------------
+  # Principio III: la barrera de capas debe ser estructural, no una convención.
+  # Este trabajo la rompe a propósito y exige que el build falle.
+  # ---------------------------------------------------------------------------
+  barrera-de-capas:
+    name: La barrera de capas es estructural
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cachear PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio/.cache
+            ~/.cache/pip
+          key: pio-native-${{ runner.os }}-${{ hashFiles('**/platformio.ini') }}
+
+      - name: Instalar PlatformIO Core
+        run: pip install --upgrade platformio
+
+      - name: Inyectar una violacion del Principio III y exigir que el build falle
+        working-directory: ${{ env.PIO_PROJECT_DIR }}
+        run: |
+          sed -i '1i #include <Arduino.h>  // violacion deliberada del Principio III' \
+            lib/wiga_control/valve_supervisor.h
+
+          if pio test -e native_posix > barrera.log 2>&1; then
+            echo "::error::La capa de control pudo incluir <Arduino.h> y el build siguio."
+            echo "::error::El Principio III ya no esta garantizado por la estructura."
+            echo "Revisar lib_ignore = wiga_hal en platformio.ini."
+            exit 1
+          fi
+
+          if ! grep -q "Arduino.h" barrera.log; then
+            echo "::error::El build fallo, pero no por la inclusion de Arduino.h."
+            tail -40 barrera.log
+            exit 1
+          fi
+
+          echo "Correcto: incluir <Arduino.h> en wiga_control rompe la compilacion de pruebas."
+
+      - name: Revertir y confirmar que la suite vuelve a pasar
+        working-directory: ${{ env.PIO_PROJECT_DIR }}
+        run: |
+          git checkout -- lib/wiga_control/valve_supervisor.h
+          pio test -e native_posix
