@@ -20,6 +20,11 @@ requieren banco. Ninguno debe darse por aprobado de memoria: cada uno deja evide
 En Windows, si `pio` no está en el `PATH`, el ejecutable está en
 `%USERPROFILE%\.platformio\penv\Scripts\pio.exe`.
 
+> **Ruta base.** El proyecto PlatformIO vive en `CABLE_VIRTUAL_V2_PIO/`. Todos los
+> comandos `pio` y todas las rutas de archivo de esta guía son relativos a esa carpeta,
+> salvo cuando se indique lo contrario. Las tres carpetas de sketches de la raíz son el
+> material original y no se compilan.
+
 ---
 
 ## Escenario 1 — Compilación reproducible desde cero (FR-030, SC-002, US-2)
@@ -99,16 +104,28 @@ el framework Arduino y el Principio III no está garantizado por el build.
 
 **Objetivo**: la configuración está realmente centralizada.
 
-1. Reemplazar `kInstallation` por un mapa de prueba de **6 válvulas** sobre 2 nodos.
+1. Reemplazar el arreglo `kMap` de `installation_map.h` por un mapa de prueba de
+   **6 válvulas** sobre 2 nodos.
 2. Ejecutar `pio run -e megaatmega2560` y `pio test -e native`.
 3. Ejecutar `git diff --name-only`.
 
 **Resultado esperado**:
-- Ambos comandos terminan en éxito con 6 válvulas, sin tocar nada más.
+- El firmware compila con 6 válvulas sin tocar nada más.
 - El diff lista **exactamente un archivo**: `lib/wiga_config/installation_map.h`.
+- Pasan **todas las pruebas menos una**: `test_mapa_de_la_instalacion_vigente`, que fija a
+  propósito el mapa de la finca actual y debe actualizarse junto con el mapa.
 
 **Falla si**: aparece cualquier archivo de `lib/wiga_domain`, `lib/wiga_control`,
-`lib/wiga_ports`, `lib/wiga_hal` o `src/` en el diff.
+`lib/wiga_ports`, `lib/wiga_hal` o `src/` en el diff, o si falla **cualquier otra** prueba
+distinta de la excepción declarada.
+
+> **Resultado medido (2026-08-21).** La primera ejecución de este escenario destapó que
+> ocho pruebas fijaban a mano las direcciones e índices del mapa de producción, lo que
+> hacía falso el criterio SC-004. Se corrigió: las pruebas de integración derivan el
+> destino del mapa mediante `nodeOf()` / `idOf()` (ver `test/test_integration/fixture.h`) y
+> ya no conocen ninguna dirección de radio. Tras la corrección, con un mapa de 6 válvulas
+> el firmware compila con **RAM 15,9 %** y pasan **71 de 72** pruebas, fallando solo la
+> excepción declarada.
 
 ---
 

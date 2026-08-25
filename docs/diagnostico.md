@@ -4,6 +4,7 @@ Con un portátil y un cable USB se puede determinar en minutos si una válvula
 problemática es un fallo de radio, de entrada del tablero o de la válvula misma.
 
 ```bash
+cd CABLE_VIRTUAL_V2_PIO
 pio device monitor -b 9600
 ```
 

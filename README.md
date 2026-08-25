@@ -22,11 +22,16 @@ cable existiera.
 
 ## Empezar
 
+El proyecto que se abre en Visual Studio Code es **[`CABLE_VIRTUAL_V2_PIO/`](CABLE_VIRTUAL_V2_PIO/)**.
+Ábrelo directamente, o abre `WIGA-CableVirtual.code-workspace` para ver a la vez el
+firmware y la documentación.
+
 ```bash
-pio run -e megaatmega2560        # compilar
-pio run -e megaatmega2560 -t upload   # cargar en la placa
-pio test -e native               # verificar la lógica, sin hardware
-pio device monitor -b 9600       # consola de diagnóstico
+cd CABLE_VIRTUAL_V2_PIO
+pio run  -e megaatmega2560            # compilar
+pio run  -e megaatmega2560 -t upload  # cargar en la placa
+pio test -e native                    # verificar la lógica, sin hardware
+pio device monitor -b 9600            # consola de diagnóstico
 ```
 
 Guía completa en [docs/puesta-en-marcha.md](docs/puesta-en-marcha.md).
@@ -64,18 +69,24 @@ después.
 ## Arquitectura
 
 ```
-src/main.cpp          raíz de composición — crea adaptadores y corre el lazo
-lib/wiga_config/      mapa de finca y tiempos      ← lo único que se edita por instalación
-lib/wiga_domain/      tipos, protocolo, tiempo     ┐
-lib/wiga_control/     antirebote, reintentos,      │ sin dependencias de hardware:
-                      planificador, supervisor     │ se prueban en el escritorio
-lib/wiga_ports/       interfaces hacia hardware    ┘
-lib/wiga_hal/         adaptadores Arduino/XBee/LCD ← única capa que toca hardware
-test/                 71 pruebas en host
+CABLE_VIRTUAL_V2_PIO/          ← EL PROYECTO. Se abre en VS Code.
+├── platformio.ini
+├── src/main.cpp               raíz de composición — crea adaptadores y corre el lazo
+├── lib/wiga_config/           mapa de finca y tiempos  ← lo único que se edita por finca
+├── lib/wiga_domain/           tipos, protocolo, tiempo     ┐
+├── lib/wiga_control/          antirebote, reintentos,      │ sin dependencias de
+│                              planificador, supervisor     │ hardware: se prueban
+├── lib/wiga_ports/            interfaces hacia hardware    ┘ en el escritorio
+├── lib/wiga_hal/              adaptadores Arduino/XBee/LCD ← única capa con hardware
+└── test/                      71 pruebas en host
 
 CABLE_VIRTUAL___LATCH_V1/   ┐
-WIGA_24IN_LCD/              │ sketches originales, sin modificar y en su sitio.
-WIGA_24IN_LCDB1_5/          ┘ PlatformIO no los compila. Ver docs/firmware-anterior.md
+WIGA_24IN_LCD/              │ sketches originales de Arduino, sin modificar y en su
+WIGA_24IN_LCDB1_5/          ┘ sitio. PlatformIO no los compila.
+                              Ver docs/firmware-anterior.md
+
+docs/                          guías de puesta en marcha, configuración y diagnóstico
+specs/                         especificación Spec Kit de la migración
 ```
 
 La separación **no es una convención**: el entorno de pruebas ignora `lib/wiga_hal`, así
@@ -101,7 +112,7 @@ Ambas decisiones están documentadas en
 
 ## Configurar una finca nueva
 
-Se edita **un solo archivo**: [`lib/wiga_config/installation_map.h`](lib/wiga_config/installation_map.h).
+Se edita **un solo archivo**: [`CABLE_VIRTUAL_V2_PIO/lib/wiga_config/installation_map.h`](CABLE_VIRTUAL_V2_PIO/lib/wiga_config/installation_map.h).
 Un pin duplicado o un par (dirección, id) repetido **no compila**. Procedimiento en
 [docs/configuracion-finca.md](docs/configuracion-finca.md).
 

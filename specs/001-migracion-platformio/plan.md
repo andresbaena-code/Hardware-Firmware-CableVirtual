@@ -115,7 +115,11 @@ specs/001-migracion-platformio/
 
 ### Source Code (repository root)
 
+El proyecto PlatformIO vive en su propia carpeta, `CABLE_VIRTUAL_V2_PIO/`, para que los
+sketches originales de Arduino permanezcan intactos en la raíz del repositorio.
+
 ```text
+CABLE_VIRTUAL_V2_PIO/
 platformio.ini                   # entornos megaatmega2560 y native; dependencias fijadas
 src/
 └── main.cpp                     # única raíz de composición: instancia adaptadores,
