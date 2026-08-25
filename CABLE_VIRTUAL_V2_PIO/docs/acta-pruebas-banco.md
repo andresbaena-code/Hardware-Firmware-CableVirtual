@@ -63,7 +63,6 @@ Firma responsable del bloque 0: ______________________________
 ## Bloque 1 — Escenario 6: arranque y diagnóstico (FR-010, FR-026)
 
 ```bash
-cd CABLE_VIRTUAL_V2_PIO
 pio run -e megaatmega2560 -t upload
 pio device monitor -b 9600
 ```

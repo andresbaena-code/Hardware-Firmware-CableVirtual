@@ -28,6 +28,8 @@ REQUISITOS_DE_PROYECTO = {
     "NFR-003",  # comportamiento electrico no empeora
 }
 
+PROYECTO = "CABLE_VIRTUAL_V2_PIO"
+
 EXTENSIONES_CODIGO = {".h", ".cpp", ".ini"}
 EXTENSIONES_INFRA = {".yml", ".yaml", ".py", ".md"}
 
@@ -50,7 +52,7 @@ def recolectar(raiz: pathlib.Path, extensiones: set, subdirs) -> set:
 
 def main() -> int:
     raiz = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else ".").resolve()
-    spec = raiz / "specs" / "001-migracion-platformio" / "spec.md"
+    spec = raiz / PROYECTO / "specs" / "001-migracion-platformio" / "spec.md"
 
     if not spec.is_file():
         print(f"::error::No se encontro la especificacion en {spec}")
@@ -61,8 +63,8 @@ def main() -> int:
         print("::error::La especificacion no declara ningun requisito.")
         return 1
 
-    en_codigo = recolectar(raiz, EXTENSIONES_CODIGO, ["CABLE_VIRTUAL_V2_PIO"])
-    en_infra = recolectar(raiz, EXTENSIONES_INFRA, [".github", "docs"])
+    en_codigo = recolectar(raiz, EXTENSIONES_CODIGO, [PROYECTO])
+    en_infra = recolectar(raiz, EXTENSIONES_INFRA, [".github", PROYECTO + "/docs"])
 
     faltan = []
     for req in declarados:

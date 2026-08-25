@@ -4,7 +4,6 @@ Con un portátil y un cable USB se puede determinar en minutos si una válvula
 problemática es un fallo de radio, de entrada del tablero o de la válvula misma.
 
 ```bash
-cd CABLE_VIRTUAL_V2_PIO
 pio device monitor -b 9600
 ```
 
@@ -133,7 +132,6 @@ limitación, no un defecto del diagnóstico. El control de válvulas no depende 
 Para compilar sin trazas:
 
 ```bash
-cd CABLE_VIRTUAL_V2_PIO
 pio run -e megaatmega2560_silent
 ```
 

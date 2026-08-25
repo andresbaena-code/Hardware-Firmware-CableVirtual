@@ -47,7 +47,6 @@ Si `pio` no está en el `PATH` de Windows, el ejecutable está en:
 ## 3. Compilar y cargar
 
 ```bash
-cd CABLE_VIRTUAL_V2_PIO
 pio run -e megaatmega2560
 ```
 
@@ -96,7 +95,7 @@ incluye `<Arduino.h>`, `<XBee.h>` o `<LiquidCrystal_I2C.h>` desde `lib/wiga_doma
 Es un comportamiento **deseado**. Comprobarlo lleva 30 segundos:
 
 ```bash
-# añadir #include <Arduino.h> en CABLE_VIRTUAL_V2_PIO/lib/wiga_control/valve_supervisor.h
+# añadir #include <Arduino.h> en lib/wiga_control/valve_supervisor.h
 pio test -e native      # debe FALLAR
 # revertir
 pio test -e native      # debe PASAR
@@ -128,12 +127,12 @@ recursiva, válida en C++11. Está previsto en
 [research.md R-010](../specs/001-migracion-platformio/research.md).
 
 **Las pruebas no encuentran los dobles de prueba.**
-Los `fake_*.h` viven en `CABLE_VIRTUAL_V2_PIO/test/mocks` y se exponen con `-Itest/mocks` en `platformio.ini`.
+Los `fake_*.h` viven en `test/mocks` y se exponen con `-Itest/mocks` en `platformio.ini`.
 Si se añade un entorno de prueba nuevo, hay que repetir esa bandera.
 
 **El LCD no muestra nada.**
 Verificar la dirección I2C. El proyecto asume `0x27`; algunos módulos PCF8574 vienen en
-`0x3F`. Se cambia en `CABLE_VIRTUAL_V2_PIO/lib/wiga_config/timing_config.h`. Un panel que no responde **no
+`0x3F`. Se cambia en `lib/wiga_config/timing_config.h`. Un panel que no responde **no
 detiene el control de válvulas**: es deliberado.
 
 **El firmware arranca pero no transmite nada.**

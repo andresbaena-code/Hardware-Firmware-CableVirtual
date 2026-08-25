@@ -1,7 +1,7 @@
 # Configurar una instalación
 
 Poner en marcha una finca nueva se hace editando **un solo archivo**:
-[`CABLE_VIRTUAL_V2_PIO/lib/wiga_config/installation_map.h`](../CABLE_VIRTUAL_V2_PIO/lib/wiga_config/installation_map.h).
+[`lib/wiga_config/installation_map.h`](../lib/wiga_config/installation_map.h).
 
 Si hace falta tocar cualquier otra cosa, el diseño está mal y se corrige el diseño, no el
 mapa.
@@ -56,7 +56,7 @@ en las pruebas de host, donde los nombres `A0..A15` no existen.
 2. **Leer las direcciones.** Con XCTU o la consola AT, leer `SH`/`SL` de cada XBee. Solo
    se usa `SL`.
 3. **Escribir una fila por válvula**, en el orden en que deben aparecer en el panel.
-4. **Compilar.** Desde `CABLE_VIRTUAL_V2_PIO/`: `pio run -e megaatmega2560`. Si falla una validación, corregir el mapa.
+4. **Compilar.** `pio run -e megaatmega2560`. Si falla una validación, corregir el mapa.
    **No** modificar las validaciones.
 5. **Ajustar tiempos** en `timing_config.h` solo si la instalación lo exige. Los valores
    por defecto son los validados en campo.
@@ -111,7 +111,7 @@ producción.
 
 ## Parámetros de tiempo
 
-En [`CABLE_VIRTUAL_V2_PIO/lib/wiga_config/timing_config.h`](../CABLE_VIRTUAL_V2_PIO/lib/wiga_config/timing_config.h).
+En [`lib/wiga_config/timing_config.h`](../lib/wiga_config/timing_config.h).
 
 | Constante | Por defecto | Qué controla |
 |---|---|---|

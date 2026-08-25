@@ -20,10 +20,10 @@ requieren banco. Ninguno debe darse por aprobado de memoria: cada uno deja evide
 En Windows, si `pio` no está en el `PATH`, el ejecutable está en
 `%USERPROFILE%\.platformio\penv\Scripts\pio.exe`.
 
-> **Ruta base.** El proyecto PlatformIO vive en `CABLE_VIRTUAL_V2_PIO/`. Todos los
-> comandos `pio` y todas las rutas de archivo de esta guía son relativos a esa carpeta,
-> salvo cuando se indique lo contrario. Las tres carpetas de sketches de la raíz son el
-> material original y no se compilan.
+> **Ruta base.** Todos los comandos y rutas de esta guía son relativos a la raíz del
+> proyecto PlatformIO, es decir, a la carpeta `CABLE_VIRTUAL_V2_PIO/` que contiene también
+> este documento. Las otras tres carpetas del repositorio son los sketches originales de
+> Arduino y no se compilan.
 
 ---
 

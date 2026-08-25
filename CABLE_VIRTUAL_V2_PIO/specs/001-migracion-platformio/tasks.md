@@ -21,8 +21,9 @@ validar cada una de forma independiente.
 - **[P]**: puede ejecutarse en paralelo (archivos distintos, sin dependencias pendientes)
 - **[Story]**: historia de usuario a la que pertenece (US1..US6)
 - Cada tarea indica la ruta exacta del archivo y los requisitos que cubre
-- **Ruta base**: salvo `docs/`, `specs/` y las carpetas de sketches originales, todas las
-  rutas son relativas a `CABLE_VIRTUAL_V2_PIO/`, donde vive el proyecto PlatformIO
+- **Ruta base**: todas las rutas son relativas a la raíz del proyecto PlatformIO
+  (`CABLE_VIRTUAL_V2_PIO/`), salvo `.github/`, que por exigencia de GitHub Actions vive en
+  la raíz del repositorio
 
 ---
 
