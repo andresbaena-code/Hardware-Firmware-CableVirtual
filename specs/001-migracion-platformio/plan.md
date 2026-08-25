@@ -157,16 +157,15 @@ test/
 ├── test_integration/            # supervisor completo contra dobles de prueba
 └── mocks/                       # implementaciones de prueba de los puertos
 
-legacy/                          # material archivado (FR-033)
-├── README.md                    # a qué instalación corresponde cada versión
-├── CABLE_VIRTUAL___LATCH_V1/
-├── WIGA_24IN_LCD/
-└── WIGA_24IN_LCDB1_5/
+CABLE_VIRTUAL___LATCH_V1/        # sketches originales: SE QUEDAN EN LA RAIZ, sin
+WIGA_24IN_LCD/                   # modificar. Son el material del cliente; no se
+WIGA_24IN_LCDB1_5/               # mueven ni se borran (FR-033).
 
 docs/
 ├── puesta-en-marcha.md          # entorno, compilación, carga (FR-034)
 ├── configuracion-finca.md       # cómo mapear una instalación nueva
-└── diagnostico.md               # lectura de la consola serie, fallos típicos
+├── diagnostico.md               # lectura de la consola serie, fallos típicos
+└── firmware-anterior.md         # qué es cada sketch y sus defectos conocidos
 ```
 
 **Structure Decision**: se adopta la estructura de librerías internas de PlatformIO
@@ -175,7 +174,9 @@ las librerías incluidas: el entorno `native` compila `wiga_config`, `wiga_domai
 `wiga_control` y `wiga_ports`, y **nunca** `wiga_hal`. Con eso, la barrera de capas del
 Principio III deja de depender de la disciplina del desarrollador y pasa a ser una
 propiedad del build: incluir `<Arduino.h>` en el dominio rompe la compilación de pruebas de
-inmediato. Los sketches originales se mueven a `legacy/` sin modificar, cumpliendo FR-033.
+inmediato. Los sketches originales **permanecen en la raiz, sin moverse ni modificarse**: son el
+material entregado por el cliente. FR-033 se cumple documentandolos en
+`docs/firmware-anterior.md`, no reubicandolos.
 
 ## Fases del trabajo
 

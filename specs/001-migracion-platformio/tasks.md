@@ -29,10 +29,10 @@ validar cada una de forma independiente.
 **Purpose**: dejar el proyecto PlatformIO en pie, con ambos entornos y las dependencias
 fijadas, y archivar el material heredado antes de tocar nada.
 
-- [X] T001 Crear el esqueleto de directorios del proyecto (`src/`, `lib/wiga_config/`, `lib/wiga_domain/`, `lib/wiga_control/`, `lib/wiga_ports/`, `lib/wiga_hal/`, `test/`, `docs/`, `legacy/`) según la estructura de [plan.md](./plan.md)
+- [X] T001 Crear el esqueleto de directorios del proyecto (`src/`, `lib/wiga_config/`, `lib/wiga_domain/`, `lib/wiga_control/`, `lib/wiga_ports/`, `lib/wiga_hal/`, `test/`, `docs/`) según la estructura de [plan.md](./plan.md)
 - [X] T002 Crear `platformio.ini` con el entorno `megaatmega2560` (framework arduino, `-std=gnu++14` vía `build_unflags`/`build_flags`) y las dependencias fijadas `andrewrapp/XBee@0.0.0-alpha+sha.39f236ea18` y `marcoschwartz/LiquidCrystal_I2C@1.1.4` — cubre FR-030, R-001, R-007
 - [X] T003 Añadir al `platformio.ini` el entorno `native` (`platform = native`, `test_framework = unity`) con `lib_ldf_mode = chain+` y `build_src_filter` que **excluya** `lib/wiga_hal`, de modo que la barrera de capas sea estructural — cubre FR-031, CP-03, Principio III
-- [X] T004 [P] Mover sin modificar los tres sketches originales a `legacy/CABLE_VIRTUAL___LATCH_V1/`, `legacy/WIGA_24IN_LCD/` y `legacy/WIGA_24IN_LCDB1_5/` — cubre FR-033
+- [X] T004 [P] **Dejar los tres sketches originales donde están, en la raíz del repositorio, sin modificarlos ni moverlos.** Son el material entregado por el cliente. PlatformIO no los compila (solo construye `src/` y `lib/`) — cubre FR-033
 - [X] T005 [P] Extender `.gitignore` con los artefactos de PlatformIO (`.pio/`, `.vscode/ipch/`, `compile_commands.json`)
 - [X] T006 [P] Crear `.vscode/extensions.json` recomendando `platformio.platformio-ide`, para que VS Code proponga la extensión al abrir el repositorio — cubre SC-002
 - [X] T007 Verificar que `pio run -e megaatmega2560` descarga las dependencias y compila un `src/main.cpp` vacío en un equipo limpio — cubre escenario 1 de [quickstart.md](./quickstart.md)
@@ -185,8 +185,8 @@ con solo la consola serie.
 
 **Independent Test**: localizar los sketches archivados y su documento de diferencias.
 
-- [X] T063 [US6] Escribir `legacy/README.md` indicando, por cada sketch archivado, a qué instalación corresponde, en qué se diferencia del firmware vigente y por qué no se migró — cubre FR-033
-- [X] T064 [US6] Documentar en `legacy/README.md` los defectos identificados en las versiones antiguas (`WIGA_24IN_LCDB1_5` declara el LCD como 16x3 pero escribe 4 filas, y `mapear()` recorre `sizeof(direcciones)` en vez del número de elementos) para que nadie los reintroduzca — cubre FR-033
+- [X] T063 [US6] Escribir `docs/firmware-anterior.md` indicando, por cada sketch original, a qué instalación corresponde, en qué se diferencia del firmware vigente y por qué no se migró — cubre FR-033
+- [X] T064 [US6] Documentar en `docs/firmware-anterior.md` los defectos identificados en las versiones antiguas (`WIGA_24IN_LCDB1_5` declara el LCD como 16x3 pero escribe 4 filas, y `mapear()` recorre `sizeof(direcciones)` en vez del número de elementos) para que nadie los reintroduzca — cubre FR-033
 
 **Checkpoint**: el legado está preservado y explicado, sin cargar mantenimiento.
 
@@ -237,11 +237,11 @@ Phase 2 (Foundational)  ← BLOQUEA TODO
 | US3 (pruebas en host) | US1 | la lógica de control existe |
 | US4 (configuración) | Phase 2 (T011-T013) | el mapa y sus validaciones existen |
 | US5 (diagnóstico) | US1 (T038) | el supervisor emite transiciones |
-| US6 (legado) | Phase 1 (T004) | los sketches están archivados |
+| US6 (legado) | Phase 1 (T004) | los sketches están documentados |
 | Phase 9 (panel) | US1 (T038) | el supervisor conoce el estado |
 
-**US6 es independiente de todo**: puede hacerse en cualquier momento tras T004, incluso en
-paralelo con la implementación del control.
+**US6 es independiente de todo**: puede hacerse en cualquier momento, incluso en paralelo
+con la implementación del control.
 
 ---
 

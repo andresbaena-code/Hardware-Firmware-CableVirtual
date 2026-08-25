@@ -13,6 +13,30 @@
 namespace wiga {
 namespace test {
 
+// --- Derivacion del destino desde el mapa -----------------------------------
+// Las pruebas NO fijan direcciones de radio a mano. Si lo hicieran, cambiar la
+// finca obligaria a editarlas, y la promesa del criterio SC-004 ("configurar
+// una instalacion nueva toca un solo archivo") seria falsa.
+
+inline uint32_t nodeOf(ValveIndex index) {
+    return config::valveMapping(index).nodeAddressLsb;
+}
+
+inline uint8_t idOf(ValveIndex index) {
+    return config::valveMapping(index).valveId;
+}
+
+/// Ultima valvula del mapa: sirve como canal "lejano" en cualquier instalacion.
+constexpr ValveIndex kLastValve = config::kValveCount - 1;
+
+/// Cuantas valvulas se averian en las pruebas de aislamiento, dejando siempre
+/// al menos una sana.
+constexpr ValveIndex kFailingCount =
+    (config::kValveCount > 8) ? 8 : static_cast<ValveIndex>(config::kValveCount - 1);
+
+static_assert(config::kValveCount >= 3,
+              "las pruebas de integracion necesitan al menos 3 valvulas");
+
 struct Bench {
     FakeClock       clock;
     FakeInputs      inputs;

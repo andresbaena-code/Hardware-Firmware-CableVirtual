@@ -1,10 +1,11 @@
 # Firmware anterior — material archivado
 
-Estos sketches de Arduino son las versiones previas del sistema, conservadas **sin
-modificar**. No se compilan ni se mantienen: están aquí para poder entender por qué una
-instalación antigua se comporta distinto.
+Estos sketches de Arduino son las versiones previas del sistema. Siguen en la **raíz del
+repositorio, exactamente donde estaban y sin modificar**: son el material original del
+cliente y no se mueven ni se borran.
 
-El firmware vigente está en la raíz del repositorio y es un proyecto PlatformIO.
+No se compilan ni se mantienen. Están para poder entender por qué una instalación antigua
+se comporta distinto. PlatformIO los ignora, porque solo construye `src/` y `lib/`.
 
 ---
 

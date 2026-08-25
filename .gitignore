@@ -7,12 +7,13 @@ build/
 *.a
 *.d
 
-# Comprimidos y respaldos
-*.rar
-*.zip
-*.7z
+# Respaldos temporales
 *.bak
 *~
+
+# NOTA: los comprimidos (*.rar, *.zip) NO se ignoran a proposito. Excluirlos
+# hace que un respaldo del cliente quede fuera del control de versiones y no se
+# pueda recuperar si se borra por accidente.
 
 # OneDrive / Windows
 Thumbs.db

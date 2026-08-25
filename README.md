@@ -18,7 +18,7 @@ cable existiera.
 | Placa | Arduino Mega 2560 (ATmega2560) |
 | Uso de RAM | 22,2 % (1 822 / 8 192 B) — el límite del proyecto es 75 % |
 | Uso de Flash | 4,8 % (12 110 / 253 952 B) |
-| Pruebas en host | 70, todas en verde, 18 s |
+| Pruebas en host | 71, todas en verde, 18 s |
 
 ## Empezar
 
@@ -71,8 +71,11 @@ lib/wiga_control/     antirebote, reintentos,      │ sin dependencias de hardw
                       planificador, supervisor     │ se prueban en el escritorio
 lib/wiga_ports/       interfaces hacia hardware    ┘
 lib/wiga_hal/         adaptadores Arduino/XBee/LCD ← única capa que toca hardware
-test/                 70 pruebas en host
-legacy/               firmware anterior, archivado
+test/                 71 pruebas en host
+
+CABLE_VIRTUAL___LATCH_V1/   ┐
+WIGA_24IN_LCD/              │ sketches originales, sin modificar y en su sitio.
+WIGA_24IN_LCDB1_5/          ┘ PlatformIO no los compila. Ver docs/firmware-anterior.md
 ```
 
 La separación **no es una convención**: el entorno de pruebas ignora `lib/wiga_hal`, así

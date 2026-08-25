@@ -9,12 +9,8 @@
 using namespace wiga;
 using namespace wiga::test;
 
-// Fila 0 del mapa de instalacion.
-static constexpr uint32_t kNode0 = 0x42878FDBUL;
-static constexpr uint8_t  kId0   = 0;
-// Fila 4: nodo distinto, para probar aislamiento entre canales.
-static constexpr uint32_t kNode4 = 0x41C3F584UL;
-static constexpr uint8_t  kId4   = 4;
+// El destino de cada valvula se deriva del mapa (ver fixture.h), nunca se fija
+// a mano: estas pruebas deben pasar con cualquier instalacion configurada.
 
 // --- T2 + T3: la entrada cambia y se transmite la orden correcta ------------
 static void test_cambio_de_entrada_transmite_la_orden(void) {
@@ -26,8 +22,8 @@ static void test_cambio_de_entrada_transmite_la_orden(void) {
     b.settleInput();
 
     TEST_ASSERT_EQUAL_UINT16(1, b.radio.sentCount());
-    TEST_ASSERT_EQUAL_HEX32(kNode0, b.radio.lastSent().nodeAddressLsb);
-    TEST_ASSERT_EQUAL_UINT8(kId0, b.radio.lastSent().valveId);
+    TEST_ASSERT_EQUAL_HEX32(nodeOf(0), b.radio.lastSent().nodeAddressLsb);
+    TEST_ASSERT_EQUAL_UINT8(idOf(0), b.radio.lastSent().valveId);
     // Abrir = nivel electrico bajo (logica inversa por transistor).
     TEST_ASSERT_TRUE(b.radio.lastSent().level == SignalLevel::Low);
     TEST_ASSERT_TRUE(b.supervisor.record(0).phase == ValvePhase::Awaiting);
@@ -41,7 +37,7 @@ static void test_confirmacion_valida_cierra_el_ciclo(void) {
     b.settleInput();
     TEST_ASSERT_FALSE(b.supervisor.record(0).verified());
 
-    b.radio.enqueue(kNode0, kId0, SignalLevel::Low);  // el nodo confirma abierta
+    b.radio.enqueue(nodeOf(0), idOf(0), SignalLevel::Low);  // el nodo confirma abierta
     b.step(10);
 
     TEST_ASSERT_TRUE(b.supervisor.record(0).verified());
@@ -58,7 +54,7 @@ static void test_confirmacion_con_nivel_distinto_no_confirma(void) {
     b.settleInput();
 
     // El nodo responde "cerrada" cuando se le pidio abrir.
-    b.radio.enqueue(kNode0, kId0, SignalLevel::High);
+    b.radio.enqueue(nodeOf(0), idOf(0), SignalLevel::High);
     b.step(10);
 
     TEST_ASSERT_FALSE(b.supervisor.record(0).verified());
@@ -177,7 +173,7 @@ static void test_confirmacion_recibida_evita_el_reintento(void) {
     b.settleInput();
     TEST_ASSERT_EQUAL_UINT16(1, b.radio.sentCount());
 
-    b.radio.enqueue(kNode0, kId0, SignalLevel::Low);
+    b.radio.enqueue(nodeOf(0), idOf(0), SignalLevel::Low);
     b.step(10);
 
     // Media hora despues no debe haber ni un solo reintento ni un TMO.
@@ -197,8 +193,8 @@ static void test_varias_confirmaciones_en_la_misma_vuelta(void) {
     b.step(config::kLatchGuardMs);
     b.settleInput();
 
-    b.radio.enqueue(kNode0, kId0, SignalLevel::Low);
-    b.radio.enqueue(kNode4, kId4, SignalLevel::Low);
+    b.radio.enqueue(nodeOf(0), idOf(0), SignalLevel::Low);
+    b.radio.enqueue(nodeOf(4), idOf(4), SignalLevel::Low);
     b.step(10);
 
     TEST_ASSERT_TRUE(b.supervisor.record(0).verified());
@@ -217,7 +213,7 @@ static void test_simbolos_del_panel(void) {
     b.settleInput();
     TEST_ASSERT_EQUAL_CHAR(symbol::kPending, b.display.symbol(0));  // orden en curso
 
-    b.radio.enqueue(kNode0, kId0, SignalLevel::Low);
+    b.radio.enqueue(nodeOf(0), idOf(0), SignalLevel::Low);
     b.step(10);
     TEST_ASSERT_EQUAL_CHAR(symbol::kOpen, b.display.symbol(0));     // abierta
 

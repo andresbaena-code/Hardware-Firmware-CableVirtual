@@ -48,12 +48,14 @@ static void test_sin_cambios_no_transmite_nunca(void) {
 // El arranque siembra el estado fisico correcto, con la inversion aplicada.
 static void test_arranque_siembra_el_estado_fisico(void) {
     Bench b;
-    b.inputs.requestOpen(7);     // nivel bajo
-    b.inputs.requestClose(8);    // nivel alto
+    // Indices derivados del tamano del mapa: la prueba debe pasar con cualquier
+    // instalacion configurada (criterio SC-004).
+    b.inputs.requestOpen(0);            // nivel bajo
+    b.inputs.requestClose(kLastValve);  // nivel alto
     b.supervisor.begin();
 
-    TEST_ASSERT_TRUE(b.supervisor.record(7).confirmed == ValveState::Open);
-    TEST_ASSERT_TRUE(b.supervisor.record(8).confirmed == ValveState::Closed);
+    TEST_ASSERT_TRUE(b.supervisor.record(0).confirmed == ValveState::Open);
+    TEST_ASSERT_TRUE(b.supervisor.record(kLastValve).confirmed == ValveState::Closed);
     TEST_ASSERT_TRUE(b.inputs.configured());
 }
 
