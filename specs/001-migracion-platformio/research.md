@@ -229,7 +229,7 @@ que la barrera del Principio III sea **estructural**, no una convención: si alg
 **Decisión**: el mapa de instalación se declara como un único arreglo `constexpr` de
 estructuras, y se valida con `static_assert` sobre funciones `constexpr` que detectan pines
 repetidos y pares (dirección, identificador) repetidos. El número de válvulas se deriva con
-`sizeof(kInstallation)/sizeof(kInstallation[0])`.
+`sizeof(kMap)/sizeof(kMap[0])`.
 
 **Racional**: el sketch base mantenía tres arreglos paralelos de 24 elementos editados a
 mano. Un desajuste entre ellos no produce error de compilación: produce una válvula que

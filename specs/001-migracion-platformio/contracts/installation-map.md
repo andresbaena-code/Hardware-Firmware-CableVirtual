@@ -32,7 +32,7 @@ El **índice** de cada entrada en el arreglo es el número de válvula del siste
 ## 2. Forma del archivo
 
 ```
-constexpr ValveMapping kInstallation[] = {
+constexpr ValveMapping kMap[] = {          // en namespace detail
   // idx  dirección LSB   id  pin      bloque / finca
   /*  0 */ { 0x42878FDB,  0,  A0  },   // bloque 1
   /*  1 */ { 0x42878FDB,  1,  A1  },   // bloque 1
@@ -40,7 +40,7 @@ constexpr ValveMapping kInstallation[] = {
   /* 23 */ { 0x41C3F54F,  7,  A15 },   // bloque 8
 };
 
-constexpr uint8_t kValveCount = sizeof(kInstallation) / sizeof(kInstallation[0]);
+constexpr uint8_t kValveCount = sizeof(kMap) / sizeof(kMap[0]);
 ```
 
 **Regla MAP-01** (FR-024): `kValveCount` se **deriva** del arreglo. Está prohibido
@@ -123,7 +123,7 @@ analógica (tensión de batería, por ejemplo) debe replantear el mapeo.
    nodo.
 2. Leer la dirección de 64 bits de cada nodo (parámetros `SH`/`SL` del XBee). Se usan
    únicamente los 32 bits bajos (`SL`).
-3. Escribir una fila por válvula en `kInstallation`, en el orden en que deben aparecer en
+3. Escribir una fila por válvula en `detail::kMap`, en el orden en que deben aparecer en
    el panel.
 4. Compilar. Si alguna validación `MAP-V*` falla, corregir el mapa. **No** modificar las
    validaciones.

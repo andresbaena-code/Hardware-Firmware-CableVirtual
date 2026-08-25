@@ -45,6 +45,11 @@ jobs:
         working-directory: ${{ env.PIO_PROJECT_DIR }}
         run: pio test -e native_posix
 
+      # Principio VII y criterio SC-008: la trazabilidad tiene que ser un hecho
+      # verificable, no una promesa que se degrada al evolucionar el codigo.
+      - name: Verificar la trazabilidad requisito -> codigo (SC-008)
+        run: python .github/scripts/check_traceability.py .
+
   # ---------------------------------------------------------------------------
   # Puerta 1 y 3: compila sin errores y el uso de memoria queda registrado.
   # ---------------------------------------------------------------------------

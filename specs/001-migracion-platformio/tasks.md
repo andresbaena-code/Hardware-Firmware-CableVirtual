@@ -55,7 +55,7 @@ específico de una historia, y **todo** lo demás depende de ello.
 - [X] T008 Implementar `lib/wiga_domain/valve_types.h` con `SignalLevel`, `ValveState`, `ValveIndex` y las funciones `constexpr toValveState()` / `toSignalLevel()` que aplican la lógica inversa por transistor — cubre FR-021, FR-021b, invariantes V-01/V-02
 - [X] T009 Escribir `test/test_domain/test_valve_types.cpp` verificando la ida y vuelta de la conversión (V-01) y la tabla de inversión de [contracts/application-protocol.md §4](./contracts/application-protocol.md) — cubre FR-021
 - [X] T010 [P] Implementar `lib/wiga_config/timing_config.h` con todas las constantes temporales de [data-model.md §2.2](./data-model.md), tipadas explícitamente y con unidad en el nombre, más los `static_assert` de C-05 y C-06 — cubre FR-023, R-005
-- [X] T011 Implementar `lib/wiga_config/installation_map.h` con `ValveMapping`, el arreglo `constexpr kInstallation` transcrito de [contracts/installation-map.md §4](./contracts/installation-map.md) y `kValveCount` derivado con `sizeof` — cubre FR-023, FR-024, MAP-01, MAP-02
+- [X] T011 Implementar `lib/wiga_config/installation_map.h` con `ValveMapping`, el arreglo `constexpr detail::kMap` transcrito de [contracts/installation-map.md §4](./contracts/installation-map.md) y `kValveCount` derivado con `sizeof` — cubre FR-023, FR-024, MAP-01, MAP-02
 - [X] T012 Añadir a `lib/wiga_config/installation_map.h` las funciones `constexpr` de detección de duplicados y los seis `static_assert` MAP-V1..MAP-V6 con mensajes en español — cubre FR-025, C-01..C-04
 - [X] T013 Escribir `test/test_domain/test_config.cpp` verificando que las funciones `constexpr` de detección devuelven el resultado correcto sobre mapas de ejemplo con y sin colisiones — cubre FR-025
 
@@ -121,7 +121,7 @@ reintentos acotados y confirmación obligatoria.
 
 ### Adaptadores de hardware
 
-- [X] T042 [P] [US1] Implementar `lib/wiga_hal/arduino_clock.h/.cpp` sobre `millis()` — cubre CLK-01..CLK-03
+- [X] T042 [P] [US1] Implementar `lib/wiga_hal/arduino_clock.h` sobre `millis()` (solo cabecera: el adaptador es una linea) — cubre CLK-01..CLK-03
 - [X] T043 [P] [US1] Implementar `lib/wiga_hal/arduino_digital_input.h/.cpp` con `INPUT_PULLUP` sobre los pines del mapa, devolviendo `SignalLevel` crudo — cubre FR-001, IN-01..IN-04
 - [X] T044 [US1] Implementar `lib/wiga_hal/xbee_radio_adapter.h/.cpp`: `send()` **sin vaciar el búfer de recepción**, y `poll()` que invoca `readPacket()` en bucle hasta agotar el búfer o alcanzar `kMaxFramesPerPoll` — cubre FR-014, FR-017, FR-018, RD-01..RD-07, R-002, R-003
 - [X] T045 [P] [US1] Implementar `lib/wiga_hal/avr_watchdog.h/.cpp` con `wdt_disable()`, `wdt_enable(WDTO_8S)` y `wdt_reset()` — cubre FR-012, WD-01..WD-04
@@ -154,7 +154,7 @@ reintentos acotados y confirmación obligatoria.
 **Independent Test**: escenarios 4 y 5 de [quickstart.md](./quickstart.md).
 
 - [X] T052 [US4] Verificar el escenario 4: duplicar un pin y confirmar el fallo de compilación con `pin de entrada duplicado en el mapa`; repetir con un par (dirección, id) duplicado; revertir — cubre FR-025, MAP-V3, MAP-V4
-- [ ] T053 [US4] Verificar el escenario 5: sustituir `kInstallation` por un mapa de prueba de 6 válvulas, comprobar que compila y que las pruebas pasan, y que `git diff --name-only` lista **un solo archivo** — cubre FR-023, FR-024, SC-004, MAP-04
+- [ ] T053 [US4] Verificar el escenario 5: sustituir el arreglo `detail::kMap` por un mapa de prueba de 6 válvulas, comprobar que compila y que las pruebas pasan, y que `git diff --name-only` lista **un solo archivo** — cubre FR-023, FR-024, SC-004, MAP-04
 - [X] T054 [US4] Escribir `docs/configuracion-finca.md` con el procedimiento de seis pasos de [contracts/installation-map.md §5](./contracts/installation-map.md), incluida la lectura de `SH`/`SL` del XBee — cubre FR-034
 - [ ] T055 [US4] Contrastar el mapa heredado contra el plano de la finca, con atención a las seis entradas del nodo `0x41C3F595` (ids 2..6, patrón distinto al resto) y dejar constancia del resultado en `docs/configuracion-finca.md` — cubre R-010, riesgo del plan
 
@@ -208,6 +208,7 @@ con solo la consola serie.
 - [X] T072 Registrar el uso final de RAM y Flash y confirmar RAM < 75 % — cubre NFR-001
 - [X] T074 Crear `.github/workflows/ci.yml` con las tres puertas de calidad automatizadas: pruebas en host, compilación con verificación de RAM < 75 %, y comprobación de que la barrera de capas es estructural — cubre NFR-001, FR-029, FR-031, Principios III y IV
 - [X] T075 Crear `docs/acta-pruebas-banco.md`, formulario de aceptación para los escenarios 6 a 10, con el bloque 0 bloqueante sobre compatibilidad del payload — cubre SC-001, SC-005, R-012
+- [X] T076 Crear `.github/scripts/check_traceability.py` y añadirlo al CI: verifica que **todo** requisito declarado en la especificación esté citado en el código o en la infraestructura, y falla si alguno deja de estarlo — cubre SC-008, Principio VII
 - [ ] T073 Publicar la rama en `https://github.com/andresbaena-code/Hardware-Firmware-CableVirtual` y abrir el pull request hacia `main` con el resumen de la migración
 
 ---
