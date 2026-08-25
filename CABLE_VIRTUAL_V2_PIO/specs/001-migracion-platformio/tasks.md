@@ -210,7 +210,7 @@ con solo la consola serie.
 - [X] T074 Crear `.github/workflows/ci.yml` con las tres puertas de calidad automatizadas: pruebas en host, compilación con verificación de RAM < 75 %, y comprobación de que la barrera de capas es estructural — cubre NFR-001, FR-029, FR-031, Principios III y IV
 - [X] T075 Crear `docs/acta-pruebas-banco.md`, formulario de aceptación para los escenarios 6 a 10, con el bloque 0 bloqueante sobre compatibilidad del payload — cubre SC-001, SC-005, R-012
 - [X] T076 Crear `.github/scripts/check_traceability.py` y añadirlo al CI: verifica que **todo** requisito declarado en la especificación esté citado en el código o en la infraestructura, y falla si alguno deja de estarlo — cubre SC-008, Principio VII
-- [ ] T073 Publicar la rama en `https://github.com/andresbaena-code/Hardware-Firmware-CableVirtual` y abrir el pull request hacia `main` con el resumen de la migración
+- [X] T073 Publicar la rama en `https://github.com/andresbaena-code/Hardware-Firmware-CableVirtual` (hecho el 2026-08-21: `main` y `001-migracion-platformio` en el remoto, 12 commits) y abrir el pull request hacia `main` con el resumen de la migración
 
 ---
 
