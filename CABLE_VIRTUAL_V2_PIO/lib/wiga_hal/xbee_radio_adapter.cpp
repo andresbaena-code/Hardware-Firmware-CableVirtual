@@ -30,7 +30,7 @@ bool XBeeRadioAdapter::send(const proto::ValveCommand& command) {
     ZBTxRequest request(destination, payload, length);
     request.setFrameId(0);  // heredado: desactiva el acuse del propio radio
     xbee_.send(request);
-    return true;
+    return Serial1.getWriteError() == 0;
 }
 
 uint8_t XBeeRadioAdapter::poll(proto::ValveReport* out, uint8_t maxReports) {
@@ -39,11 +39,13 @@ uint8_t XBeeRadioAdapter::poll(proto::ValveReport* out, uint8_t maxReports) {
     // RD-04: readPacket() devuelve UNA sola trama por llamada y deja el resto
     // en el buffer (research.md R-002). Hay que drenarlo en bucle, acotado para
     // no violar el presupuesto de ciclo del Principio I.
+    const uint32_t deadline = millis();
     while (written < maxReports) {
         xbee_.readPacket();
 
         if (xbee_.getResponse().isError()) {
             if (framingErrors_ < 0xFFFF) ++framingErrors_;  // RD-07
+            if (millis() - deadline >= config::kMaxPollDurationMs) break;
             continue;
         }
         if (!xbee_.getResponse().isAvailable()) {

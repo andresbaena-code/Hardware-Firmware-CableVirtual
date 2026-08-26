@@ -20,6 +20,12 @@ void rowLabel(uint8_t row, char* out) {
 
 }  // namespace
 
+// RA-05: verificar que las dimensiones del LCD caben en uint16_t.
+static constexpr uint16_t kLcdTotalCells =
+    static_cast<uint16_t>(config::kLcdRows) * config::kLcdColumns;
+static_assert(kLcdTotalCells <= UINT16_MAX,
+              "LCD dimensions exceed uint16_t capacity");
+
 LcdDisplayAdapter::LcdDisplayAdapter()
     : lcd_(config::kLcdI2cAddress, config::kLcdColumns, config::kLcdRows) {
     for (uint8_t r = 0; r < kRows; ++r) {
@@ -90,9 +96,16 @@ void LcdDisplayAdapter::setStatusLine(const char* text) {
 }
 
 void LcdDisplayAdapter::tick() {
-    // DP-04: con el bus caido, dejar de intentar. Un panel averiado no puede
-    // consumir presupuesto de ciclo indefinidamente.
-    if (!healthy_) return;
+    // DP-04: con el bus caido, intentar recuperacion periodica (~1 s). Si el bus
+    // se restablece, la siguiente escritura exitosa restaura healthy_.
+    if (!healthy_) {
+        ++recoveryCounter_;
+        if (recoveryCounter_ < 66) return;  // ~66 * 15 ms = ~1 s
+        recoveryCounter_ = 0;
+        consecutiveFailures_ = 0;
+        healthy_ = true;
+        // No retorna: permite escribir una celda como prueba.
+    }
 
     // DP-02: como maximo kDisplayCellsPerTick celdas por vuelta.
     uint8_t written = 0;

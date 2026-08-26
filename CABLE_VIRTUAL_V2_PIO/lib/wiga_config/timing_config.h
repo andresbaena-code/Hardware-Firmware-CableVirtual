@@ -28,8 +28,9 @@ constexpr uint32_t kBackoffIntervalMs = 3600000UL;  ///< reposo prolongado, 60 m
 constexpr uint8_t  kMaxAttempts       = 5;          ///< intentos rapidos (heredado)
 
 // --- Presupuesto por vuelta de lazo -----------------------------------------
-constexpr uint8_t kMaxFramesPerPoll    = 4;  ///< tramas drenadas por vuelta (R-002)
-constexpr uint8_t kDisplayCellsPerTick = 1;  ///< celdas de LCD escritas por vuelta (R-007)
+constexpr uint8_t  kMaxFramesPerPoll    = 4;  ///< tramas drenadas por vuelta (R-002)
+constexpr uint8_t  kDisplayCellsPerTick = 1;  ///< celdas de LCD escritas por vuelta (R-007)
+constexpr uint32_t kMaxPollDurationMs   = 10; ///< limite del drenaje de radio por vuelta
 
 // --- Panel LCD ---------------------------------------------------------------
 constexpr uint8_t kLcdI2cAddress = 0x27;
@@ -45,6 +46,8 @@ constexpr uint32_t kConsoleBaudRate = 9600;
 constexpr uint32_t kI2cClockHz      = 400000UL;  ///< 400 kHz para no bloquear (R-007)
 
 // --- Invariantes de configuracion -------------------------------------------
+static_assert(kValvesPerRow > 0,
+              "C-07: kValvesPerRow debe ser mayor que cero (evita division por cero)");
 static_assert(kDebounceMs >= kLoopPeriodMs,
               "C-05: la ventana antirebote debe cubrir al menos una vuelta de lazo");
 static_assert(kRetryIntervalMs < kBackoffIntervalMs,

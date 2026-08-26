@@ -7,7 +7,9 @@
 namespace {
 
 /// Copia de MCUSR. Vive en .noinit para sobrevivir a la inicializacion de datos.
-uint8_t g_mcusrMirror __attribute__((section(".noinit")));
+/// RA-03: volatile porque se escribe en .init3 (antes de main) y se lee en
+/// lastResetCause(); sin volatile, el compilador podria optimizar la lectura.
+volatile uint8_t g_mcusrMirror __attribute__((section(".noinit")));
 
 }  // namespace
 

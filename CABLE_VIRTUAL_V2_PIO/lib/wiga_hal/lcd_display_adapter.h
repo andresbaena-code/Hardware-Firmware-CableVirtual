@@ -40,9 +40,10 @@ private:
     LiquidCrystal_I2C lcd_;
     char    cells_[kRows][kCols];
     uint8_t dirty_[kFlags];
-    uint8_t cursor_             = 0;
+    uint8_t cursor_              = 0;
     uint8_t consecutiveFailures_ = 0;
-    bool    healthy_            = true;
+    uint16_t recoveryCounter_    = 0;   ///< RA-08: intentos de recuperacion del panel
+    bool    healthy_             = true;
 };
 
 }  // namespace hal

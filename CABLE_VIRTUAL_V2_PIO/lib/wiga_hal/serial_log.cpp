@@ -7,6 +7,14 @@
 
 namespace wiga {
 namespace hal {
+namespace {
+
+// RA-05: espacio minimo en el buffer TX antes de escribir. event() genera
+// ~24 bytes fijos (millis + tag + campos); message() genera ~12 + strlen(text).
+// Se usa el valor fijo de event() como limite conservador para ambos.
+constexpr uint8_t kMinSerialSpace = 24;
+
+}  // namespace
 
 void SerialLog::begin() {
 #if WIGA_LOG_LEVEL > 0
@@ -21,7 +29,7 @@ void SerialLog::event(LogLevel level, const char* tag,
 
     // LG-01: si no cabe en el buffer de transmision, la traza se pierde. Jamas
     // se espera a que se vacie: eso bloquearia el lazo de control.
-    if (Serial.availableForWrite() < 24) return;
+    if (Serial.availableForWrite() < kMinSerialSpace) return;
 
     // LG-04: formato de campos fijos, legible por maquina.
     Serial.print(millis());
@@ -43,7 +51,7 @@ void SerialLog::event(LogLevel level, const char* tag,
 void SerialLog::message(LogLevel level, const char* text) {
 #if WIGA_LOG_LEVEL > 0
     if (!enabled(level)) return;
-    if (Serial.availableForWrite() < 24) return;
+    if (Serial.availableForWrite() < kMinSerialSpace) return;
     Serial.print(millis());
     Serial.print(F(" "));
     Serial.println(text);

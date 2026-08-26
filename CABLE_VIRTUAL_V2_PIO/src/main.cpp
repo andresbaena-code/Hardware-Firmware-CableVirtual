@@ -46,6 +46,9 @@ void setup() {
     g_radio.begin();
     g_display.begin();
 
+    // RA-08: en AVR, Serial1.begin() e I2C.init() no retornan error.
+    // La salud del LCD se monitorea via healthy() en el lazo.
+
     // FR-026: version y causa del ultimo reinicio.
     g_log.message(wiga::LogLevel::Info, wiga::hal::kFirmwareName);
     g_log.message(wiga::LogLevel::Info, wiga::hal::kFirmwareVersion);

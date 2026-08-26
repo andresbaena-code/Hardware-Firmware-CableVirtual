@@ -54,9 +54,22 @@ public:
 
     void failNextSend() { failNextSend_ = true; }
 
+    // RA-08: inyectar tramas corruptas para verificar FR-016 en el supervisor.
+    void enqueueCorrupt(uint32_t nodeAddressLsb) {
+        if (queueCount_ >= kFakeRadioCapacity) return;
+        queue_[queueCount_].nodeAddressLsb = nodeAddressLsb;
+        queue_[queueCount_].valveId        = 0xFF;  // id invalido
+        queue_[queueCount_].level          = SignalLevel::High;
+        ++queueCount_;
+    }
+
     uint16_t sentCount() const { return sentCount_; }
-    const proto::ValveCommand& sent(uint16_t i) const { return sent_[i]; }
-    const proto::ValveCommand& lastSent() const { return sent_[sentCount_ - 1]; }
+    const proto::ValveCommand& sent(uint16_t i) const {
+        return sent_[i < kFakeRadioCapacity ? i : kFakeRadioCapacity - 1];
+    }
+    const proto::ValveCommand& lastSent() const {
+        return sent_[sentCount_ > 0 ? sentCount_ - 1 : 0];
+    }
     void clearSent() { sentCount_ = 0; }
     bool begun() const { return begun_; }
 

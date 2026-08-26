@@ -16,8 +16,10 @@ public:
     void begin() override { begun_ = true; }
 
     void setValveSymbol(ValveIndex index, char symbol) override {
-        symbols_[index] = symbol;
-        ++writes_;
+        if (index < config::kValveCount) {
+            symbols_[index] = symbol;
+            ++writes_;
+        }
     }
 
     void setStatusLine(const char* text) override { status_ = text; }

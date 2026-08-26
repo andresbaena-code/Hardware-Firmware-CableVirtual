@@ -49,7 +49,9 @@ public:
     void tick();
 
     // --- Introspeccion para pruebas y diagnostico ---
-    const ValveRecord& record(ValveIndex index) const { return records_[index]; }
+    const ValveRecord& record(ValveIndex index) const {
+        return records_[index < config::kValveCount ? index : 0];
+    }
     uint8_t valveCount() const { return config::kValveCount; }
 
 private:

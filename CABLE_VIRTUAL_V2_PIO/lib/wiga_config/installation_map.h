@@ -10,6 +10,7 @@
 
 #include <stdint.h>
 
+#include "app_protocol.h"
 #include "valve_types.h"
 
 namespace wiga {
@@ -66,6 +67,7 @@ constexpr ValveMapping kMap[] = {
 };
 
 constexpr uint8_t kCount = sizeof(kMap) / sizeof(kMap[0]);
+static_assert(kCount <= 255, "kCount overflow: demasiadas valvulas para uint8_t");
 
 // --- Funciones de validacion en tiempo de compilacion ------------------------
 
@@ -86,13 +88,13 @@ constexpr bool hasDuplicateTarget(const ValveMapping* map, uint8_t count) {
 
 constexpr bool allValveIdsInRange(const ValveMapping* map, uint8_t count) {
     for (uint8_t i = 0; i < count; ++i)
-        if (map[i].valveId > 7) return false;
+        if (map[i].valveId > proto::kMaxValveId) return false;
     return true;
 }
 
 constexpr bool allAddressesAssigned(const ValveMapping* map, uint8_t count) {
     for (uint8_t i = 0; i < count; ++i)
-        if (map[i].nodeAddressLsb == 0UL) return false;
+        if (map[i].nodeAddressLsb == uint32_t{0}) return false;
     return true;
 }
 

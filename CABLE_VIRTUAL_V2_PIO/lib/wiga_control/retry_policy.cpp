@@ -23,6 +23,10 @@ void RetryPolicy::onTransmitted(ValveRecord& record, uint32_t nowMs) const {
         ++record.attempts;
     }
     record.phase           = ValvePhase::Awaiting;
+    // RA-05: la suma puede desbordar; la comparacion en waitExpired() usa
+    // aritmetica modular (reached()) que es correcta siempre que el intervalo
+    // sea menor a 2^31 ms (~24.8 dias). Los valores heredados (30s, 60min)
+    // cumplen esta condicion.
     record.nextAttemptAtMs = nowMs + params_.retryIntervalMs;
 }
 

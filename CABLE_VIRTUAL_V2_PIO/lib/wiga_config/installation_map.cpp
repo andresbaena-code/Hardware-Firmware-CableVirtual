@@ -5,7 +5,8 @@ namespace wiga {
 namespace config {
 
 const ValveMapping& valveMapping(uint8_t index) {
-    return detail::kMap[index];
+    static const ValveMapping kEmpty{};
+    return (index < kValveCount) ? detail::kMap[index] : kEmpty;
 }
 
 uint8_t findValveIndex(uint32_t nodeAddressLsb, uint8_t valveId) {

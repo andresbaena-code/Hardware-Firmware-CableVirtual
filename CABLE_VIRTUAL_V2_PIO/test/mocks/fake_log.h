@@ -40,7 +40,10 @@ public:
 
     // --- API de prueba ---
     uint16_t count() const { return count_; }
-    const LoggedEvent& at(uint16_t i) const { return events_[i]; }
+    bool overflowed() const { return count_ > kFakeLogCapacity; }
+    const LoggedEvent& at(uint16_t i) const {
+        return events_[i < count_ ? i : 0];
+    }
     void clear() { count_ = 0; }
 
     uint16_t countOf(const char* tag) const {

@@ -18,6 +18,7 @@ void ArduinoDigitalInput::configure() {
 }
 
 SignalLevel ArduinoDigitalInput::read(ValveIndex index) const {
+    if (index >= config::kValveCount) return SignalLevel::High;
     // IN-02: se devuelve el nivel CRUDO. La conversion a estado fisico ocurre
     // en un unico punto del dominio, no aqui.
     const uint8_t pin = config::valveMapping(index).inputPin;

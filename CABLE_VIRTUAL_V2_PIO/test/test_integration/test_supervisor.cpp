@@ -244,6 +244,39 @@ static void test_fallo_de_envio_no_consume_intento(void) {
     TEST_ASSERT_EQUAL_UINT8(1, b.supervisor.record(0).attempts);
 }
 
+// --- FR-022: fallo de LCD no detiene el control de valvulas -----------------
+static void test_display_unhealthy_no_bloquea_control(void) {
+    Bench b;
+    b.supervisor.begin();
+    b.radio.clearSent();
+
+    b.simulateDisplayFailure();
+
+    b.inputs.requestOpen(0);
+    b.settleInput();
+
+    // El control sigue operando aunque el panel este caido.
+    TEST_ASSERT_EQUAL_UINT16(1, b.radio.sentCount());
+    TEST_ASSERT_TRUE(b.supervisor.record(0).phase == ValvePhase::Awaiting);
+}
+
+// --- I14: FakeLog overflow no provoca crash ---------------------------------
+static void test_fake_log_overflow_no_crash(void) {
+    FakeLog log;
+    for (uint16_t i = 0; i < kFakeLogCapacity; ++i) {
+        log.event(LogLevel::Info, logtag::kTx, i % config::kValveCount, 0);
+    }
+    TEST_ASSERT_FALSE(log.overflowed());
+    TEST_ASSERT_EQUAL_UINT16(kFakeLogCapacity, log.count());
+
+    log.event(LogLevel::Info, logtag::kTx, 0, 0);
+    TEST_ASSERT_TRUE(log.overflowed());
+    TEST_ASSERT_TRUE(log.count() > kFakeLogCapacity);
+
+    TEST_ASSERT_EQUAL_PTR(logtag::kTx, log.at(0).tag);
+    TEST_ASSERT_EQUAL_PTR(logtag::kTx, log.at(9999).tag);
+}
+
 void run_supervisor_tests(void) {
     RUN_TEST(test_cambio_de_entrada_transmite_la_orden);
     RUN_TEST(test_confirmacion_valida_cierra_el_ciclo);
@@ -257,4 +290,6 @@ void run_supervisor_tests(void) {
     RUN_TEST(test_varias_confirmaciones_en_la_misma_vuelta);
     RUN_TEST(test_simbolos_del_panel);
     RUN_TEST(test_fallo_de_envio_no_consume_intento);
+    RUN_TEST(test_display_unhealthy_no_bloquea_control);
+    RUN_TEST(test_fake_log_overflow_no_crash);
 }

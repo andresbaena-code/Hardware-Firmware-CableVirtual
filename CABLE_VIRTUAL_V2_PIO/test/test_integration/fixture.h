@@ -71,6 +71,10 @@ struct Bench {
         supervisor.tick();       // aparece el candidato
         step(debounceMs);        // se consolida el nivel estable
     }
+
+    /// RA-08: simula fallo del LCD para verificar que el control continua.
+    void simulateDisplayFailure() { display.setHealthy(false); }
+    void simulateDisplayRecovery() { display.setHealthy(true); }
 };
 
 }  // namespace test
