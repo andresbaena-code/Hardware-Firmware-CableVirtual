@@ -103,4 +103,6 @@ En Windows, si `pio` no está en el PATH:
 | Diagnóstico en campo | `docs/diagnostico.md` |
 | Firmware anterior (legado) | `docs/firmware-anterior.md` |
 | Acta de pruebas de banco | `docs/acta-pruebas-banco.md` |
+| Estándar de desarrollo firmware | `docs/ESTANDAR_DESARROLLO_FIRMWARE.md` |
+| Playbook de desarrollo firmware | `docs/PLAYBOOK_DESARROLLO_FIRMWARE.md` |
 | CI (GitHub Actions) | `.github/workflows/ci.yml` |
