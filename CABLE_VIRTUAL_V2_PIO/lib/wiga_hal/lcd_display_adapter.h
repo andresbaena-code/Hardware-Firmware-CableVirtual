@@ -28,6 +28,8 @@ public:
     bool healthy() const override { return healthy_; }
 
 private:
+    bool probe();
+    void noteFailure();
     void markDirty(uint8_t row, uint8_t col);
     bool isDirty(uint8_t row, uint8_t col) const;
     void clearDirty(uint8_t row, uint8_t col);
@@ -40,10 +42,11 @@ private:
     LiquidCrystal_I2C lcd_;
     char    cells_[kRows][kCols];
     uint8_t dirty_[kFlags];
-    uint8_t cursor_              = 0;
-    uint8_t consecutiveFailures_ = 0;
-    uint16_t recoveryCounter_    = 0;   ///< RA-08: intentos de recuperacion del panel
-    bool    healthy_             = true;
+    uint8_t  cursor_              = 0;
+    uint8_t  consecutiveFailures_ = 0;
+    uint32_t lastRecoveryAtMs_    = 0;  ///< RA-08: reintento del panel, en tiempo real
+    uint32_t lastProbeAtMs_       = 0;  ///< sondeo de presencia del panel
+    bool     healthy_             = true;
 };
 
 }  // namespace hal

@@ -10,17 +10,119 @@
 
 #include <stdint.h>
 
-#include "app_protocol.h"
 #include "valve_types.h"
 
 namespace wiga {
 namespace config {
 
 struct ValveMapping {
-    uint32_t nodeAddressLsb;  ///< 32 bits bajos de la direccion de 64 bits del nodo
-    uint8_t  valveId;         ///< 0..7, posicion de la valvula dentro del nodo
+    uint32_t nodeAddressLsb;  ///< HISTORICO: direccion XBee de la instalacion original
+    uint8_t  valveId;         ///< HISTORICO: posicion dentro del nodo XBee original
     uint8_t  inputPin;        ///< pin del Mega conectado a la salida del tablero
 };
+
+// -----------------------------------------------------------------------------
+//  BUS RS485: pines de ESTA placa
+//
+//  Verificado contra el hardware el 2026-08-27. El transceptor cuelga del
+//  SEGUNDO puerto serie del ATmega2560, no del primero:
+//
+//      TXD2  = PH1 = pin 16
+//      RXD2  = PH0 = pin 17
+//      DE/RE = PH3 = pin  6
+//
+//  El firmware asumia Serial1 (pines 18/19). Con esa suposicion las tramas
+//  salian por pines desconectados y el bus quedaba en silencio absoluto,
+//  indistinguible de una averia de cableado.
+//
+//  SOBRE EL PIN DE DE/RE, Y POR QUE ES FACIL EQUIVOCARSE
+//
+//  DE y RE estan unidos en el pin 6. Sin nadie que lo gobierne el pin queda en
+//  ALTO, y eso deja el transceptor en un estado enganoso:
+//
+//      DE  alto  -> el driver TRANSMITE, aunque nadie haya tocado el pin
+//      RE  alto  -> el receptor esta DESACTIVADO
+//
+//  Consecuencia: cualquier prueba que SOLO TRANSMITA funciona con el pin 6 sin
+//  configurar, e incluso funciona apuntando a un pin equivocado. Durante la
+//  puesta en marcha eso llevo a fijar aqui el pin 2 -tomado de un sketch que
+//  solo emitia texto- y el resultado fue una placa que transmitia
+//  perfectamente y estaba SORDA: el saludo de banco salia al cable, pero
+//  ninguna peticion Modbus se llegaba a leer jamas.
+//
+//  La prueba que si discrimina es la que RECIBE. Verificado el 2026-08-27 con
+//  un sketch que lee la trama entrante y la devuelve: solo funciona con el 6.
+// -----------------------------------------------------------------------------
+
+/// Pin de control de direccion del MAX485 (DE y RE unidos). PH3 en esta placa.
+/// Debe quedar en BAJO en reposo, o el receptor no escucha.
+constexpr uint8_t kRs485DeRePin = 6;
+
+/// Pines del puerto serie del bus. No se usan desde el firmware -de eso se
+/// encarga HardwareSerial- pero se declaran para que MAP-V9 pueda comprobar que
+/// ningun pin de entrada del tablero los pise.
+constexpr uint8_t kRs485TxPin = 16;  // PH1 / TXD2
+constexpr uint8_t kRs485RxPin = 17;  // PH0 / RXD2
+
+// -----------------------------------------------------------------------------
+//  CABLEADO DEL TABLERO  (FR-112)
+//
+//  Verificado en banco el 2026-08-27 sobre la placa real: al activar una entrada
+//  el contacto ENERGIZA el pin a 3,3 V, y en reposo la entrada queda sujeta por
+//  una resistencia de pull-down externa. El tablero es por tanto ACTIVO EN ALTO.
+//
+//  Esto NO es la inversion por transistor del nodo remoto. Son dos cosas
+//  distintas que la version anterior confundia en una sola funcion del dominio:
+//
+//    * Cableado del tablero  -> depende de como esta hecho ESTE panel. Vive aqui.
+//    * Etapa de potencia del nodo -> depende del actuador en campo. Vive en
+//      valve_types.h y no se toca desde aqui.
+//
+//  Si un panel futuro se cablea al reves -contacto a masa con pull-up-, basta
+//  cambiar estas dos constantes: ningun otro archivo se entera.
+// -----------------------------------------------------------------------------
+
+/// Nivel en el pin cuando el operador PIDE riego para esa valvula.
+constexpr SignalLevel kPanelActiveLevel = SignalLevel::High;
+
+/// Nivel en reposo. Derivado del anterior, nunca escrito dos veces.
+constexpr SignalLevel kPanelIdleLevel =
+    (kPanelActiveLevel == SignalLevel::High) ? SignalLevel::Low : SignalLevel::High;
+
+/// El tablero ya lleva pull-down externa. Activar ademas el pull-up interno del
+/// AVR formaria un divisor de tension con ella: el pin se quedaria en una zona
+/// intermedia que, segun el valor de la resistencia externa, puede llegar a
+/// leerse como ALTO de forma permanente y dejar el tablero ilegible.
+constexpr bool kPanelUsesInternalPullup = false;
+
+/// Traduce el nivel crudo del pin del tablero a lo que el operador esta pidiendo.
+/// UNICO punto donde se interpreta el cableado del panel.
+constexpr ValveState panelRequest(SignalLevel raw) {
+    return (raw == kPanelActiveLevel) ? ValveState::Open : ValveState::Closed;
+}
+
+// El nivel activo y el de reposo no pueden ser el mismo, o el tablero seria
+// indistinguible de si mismo.
+static_assert(kPanelActiveLevel != kPanelIdleLevel,
+              "MAP-V10: el nivel activo del tablero no puede igualar al de reposo");
+static_assert(panelRequest(kPanelActiveLevel) == ValveState::Open,
+              "MAP-V11: el nivel activo debe traducirse a peticion de riego");
+static_assert(panelRequest(kPanelIdleLevel) == ValveState::Closed,
+              "MAP-V12: el reposo debe traducirse a NO regar");
+
+// -----------------------------------------------------------------------------
+//  NOTA SOBRE LOS CAMPOS HISTORICOS (FR-120)
+//
+//  nodeAddressLsb y valveId provienen de la instalacion XBee original y ya NO
+//  participan en ningun direccionamiento. Se conservan para poder contrastar el
+//  mapa contra el plano de la finca.
+//
+//  El direccionamiento vigente es Modbus: el controlador es un unico esclavo y
+//  publica UN REGISTRO POR VALVULA. La direccion del registro COINCIDE con el
+//  indice de sistema de la valvula (contracts/register-map.md seccion 2), asi
+//  que se DERIVA con valveRegister() en vez de almacenarse: guardarla seria
+//  duplicar el indice y permitir que ambos se desincronizasen (Principio V).
+// -----------------------------------------------------------------------------
 
 namespace detail {
 
@@ -86,9 +188,14 @@ constexpr bool hasDuplicateTarget(const ValveMapping* map, uint8_t count) {
     return false;
 }
 
+/// Tope historico del identificador dentro de un nodo XBee. Se conserva como
+/// comprobacion de coherencia del mapa heredado, aunque el campo ya no
+/// participe en ningun direccionamiento.
+constexpr uint8_t kMaxHistoricValveId = 7;
+
 constexpr bool allValveIdsInRange(const ValveMapping* map, uint8_t count) {
     for (uint8_t i = 0; i < count; ++i)
-        if (map[i].valveId > proto::kMaxValveId) return false;
+        if (map[i].valveId > kMaxHistoricValveId) return false;
     return true;
 }
 
@@ -96,6 +203,21 @@ constexpr bool allAddressesAssigned(const ValveMapping* map, uint8_t count) {
     for (uint8_t i = 0; i < count; ++i)
         if (map[i].nodeAddressLsb == uint32_t{0}) return false;
     return true;
+}
+
+/// MAP-V9: ningun pin de entrada puede pisar los pines del bus RS485.
+///
+/// Si uno pisara DE/RE, leer un interruptor conmutaria el bus a transmision y el
+/// controlador quedaria mudo de forma intermitente. Si pisara TXD2 o RXD2, el
+/// pinMode del tablero desconfiguraria el puerto serie y no habria bus en
+/// absoluto. Ambos fallos se manifiestan como silencio, que es justo lo mas
+/// dificil de diagnosticar en campo.
+constexpr bool anyPinCollidesWithBus(const ValveMapping* map, uint8_t count) {
+    for (uint8_t i = 0; i < count; ++i) {
+        const uint8_t p = map[i].inputPin;
+        if (p == kRs485DeRePin || p == kRs485TxPin || p == kRs485RxPin) return true;
+    }
+    return false;
 }
 
 }  // namespace detail
@@ -110,6 +232,12 @@ const ValveMapping& valveMapping(uint8_t index);
 /// Devuelve kNoValve si no esta configurada. Regla RX-05.
 uint8_t findValveIndex(uint32_t nodeAddressLsb, uint8_t valveId);
 
+/// Direccion del registro Modbus de una valvula (FR-119).
+/// DERIVADA del indice, no almacenada: ver la nota sobre campos historicos.
+constexpr uint16_t valveRegister(uint8_t index) {
+    return static_cast<uint16_t>(index);
+}
+
 // --- MAP-V1..MAP-V6: el mapa invalido no compila -----------------------------
 static_assert(detail::kCount > 0,
               "MAP-V1: mapa de instalacion vacio");
@@ -123,6 +251,8 @@ static_assert(detail::allValveIdsInRange(detail::kMap, detail::kCount),
               "MAP-V5: valveId fuera de rango (0..7)");
 static_assert(detail::allAddressesAssigned(detail::kMap, detail::kCount),
               "MAP-V6: direccion de nodo sin asignar");
+static_assert(!detail::anyPinCollidesWithBus(detail::kMap, detail::kCount),
+              "MAP-V9: un pin de entrada pisa el bus RS485 (DE/RE, TXD2 o RXD2)");
 
 }  // namespace config
 }  // namespace wiga

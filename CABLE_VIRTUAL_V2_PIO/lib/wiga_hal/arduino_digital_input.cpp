@@ -9,11 +9,15 @@ namespace wiga {
 namespace hal {
 
 void ArduinoDigitalInput::configure() {
-    // IN-01: pull-up interno. El contacto del tablero cierra a masa, de modo que
-    // el nivel bajo corresponde a la solicitud de apertura (misma logica inversa
-    // que la etapa de potencia del nodo).
+    // IN-01: el modo del pin lo decide el CABLEADO del tablero, declarado en
+    // installation_map.h, no una suposicion de este adaptador.
+    //
+    // Esta instalacion energiza la entrada a 3,3 V al activarla y la sujeta con
+    // pull-down externa en reposo. Activar ademas el pull-up interno formaria un
+    // divisor con esa resistencia y podria dejar el tablero ilegible.
+    const uint8_t mode = config::kPanelUsesInternalPullup ? INPUT_PULLUP : INPUT;
     for (uint8_t i = 0; i < config::kValveCount; ++i) {
-        pinMode(config::valveMapping(i).inputPin, INPUT_PULLUP);
+        pinMode(config::valveMapping(i).inputPin, mode);
     }
 }
 
