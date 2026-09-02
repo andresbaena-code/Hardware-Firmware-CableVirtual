@@ -1,27 +1,53 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: (plantilla sin versionar) -> 1.0.0
-Bump rationale: MAJOR inicial. Primera ratificación del documento; se sustituyen
-todos los placeholders de la plantilla por principios concretos del proyecto.
+Version change: 1.0.0 -> 2.0.0
+Bump rationale: MAJOR. Redefinición incompatible de tres reglas del Principio II
+(NO NEGOCIABLE). La regla "Confirmación obligatoria" se elimina porque es imposible
+de cumplir con el medio de radio real, y se sustituye por un régimen de seguridad
+distinto. Todo firmware escrito contra la versión 1.0.0 que dependiera de la
+confirmación del nodo deja de ser conforme.
 
-Principios definidos (nuevos, ninguno renombrado):
-  - I.   Determinismo del Lazo de Control
-  - II.  Seguridad de Válvula y Protección Eléctrica (NO NEGOCIABLE)
-  - III. Arquitectura en Capas con Hardware Abstraído
-  - IV.  Pruebas en Host Antes que Hardware (NO NEGOCIABLE)
-  - V.   Configuración Centralizada, Cero Números Mágicos
-  - VI.  Observabilidad y Diagnóstico por Puerto Serie
-  - VII. Trazabilidad Requisito -> Código -> Prueba
+Motivo: la topología real de la instalación es
+    ATmega2560 (esclavo Modbus RTU) -> UC100 (maestro Modbus + controlador Milesight
+    D2D) -> UC501 (agente D2D que acciona la válvula)
+El protocolo Milesight D2D no tiene acuse de recibo, por diseño y no por omisión: es
+un esquema unidireccional de difusión, porque un acuse por receptor produciría
+colisiones de radio al accionar varios agentes con un mismo disparo, y añadiría
+latencia y consumo a nodos alimentados por batería. Ninguna confirmación del estado
+real puede llegar jamás al controlador. Confirmado por el responsable técnico y
+contrastado con la documentación de Milesight (UC100 Datasheet y User Guide, 2025).
 
-Secciones agregadas:
-  - Restricciones Técnicas y de Plataforma   (reemplaza [SECTION_2_NAME])
-  - Flujo de Desarrollo y Puertas de Calidad (reemplaza [SECTION_3_NAME])
-  - Governance
+Aprobación de la enmienda: Andres Baena, responsable técnico del firmware, 2026-08-27.
 
+Principios modificados:
+  - II. Seguridad de Válvula y Protección Eléctrica (NO NEGOCIABLE)
+        · "Disparo secuencial"      -> "Sin actuación simultánea masiva" (reformulada:
+          el controlador ya no dispara solenoides, solo publica estado)
+        · "Reintentos acotados"     -> "Re-aserción acotada" (sustituida: no hay
+          confirmación que esperar ni intento que agotar)
+        · "Confirmación obligatoria" -> "Seguridad sin acuse de recibo" (ELIMINADA y
+          sustituida por la combinación re-aserción + auto-apagado del actuador)
+        · "Honestidad de la interfaz" (NUEVA)
+        · "Sin ráfagas al reiniciar" (SIN CAMBIOS)
+  - IV. Pruebas en Host Antes que Hardware (NO NEGOCIABLE)
+        · Actualizada la lista de reglas de negocio: protocolo XBee -> tramado,
+          verificador de redundancia y direccionamiento Modbus
+        · NUEVA regla explícita: la lógica de protocolo debe ser código puro
+          comprobable en el entorno native
+
+Principios sin cambios: I, III, V, VI, VII.
+
+Secciones modificadas:
+  - Restricciones Técnicas y de Plataforma: el medio de comunicación pasa de XBee
+    ZigBee en modo API a Modbus RTU como esclavo sobre RS485 con transceptor MAX485.
+
+Secciones sin cambios: Flujo de Desarrollo y Puertas de Calidad, Governance.
+
+Secciones agregadas: ninguna.
 Secciones removidas: ninguna.
 
-Follow-up TODOs: ninguno. Todos los placeholders fueron resueltos.
+Follow-up TODOs: ninguno.
 -->
 
 # Constitución del Firmware WIGA Cable Virtual
@@ -52,26 +78,49 @@ del disparo de válvula, lo que retrasaba la lectura de confirmaciones de radio.
 
 ### II. Seguridad de Válvula y Protección Eléctrica (NO NEGOCIABLE)
 
-Ante cualquier fallo o incertidumbre, el firmware DEBE converger al estado seguro
-de la instalación (válvula cerrada) y NUNCA repetir órdenes de forma ilimitada.
+Ante cualquier fallo o incertidumbre, el sistema DEBE converger al estado seguro
+de la instalación (válvula cerrada) y NUNCA emitir órdenes de forma ilimitada.
 
 Reglas obligatorias:
 
-- **Disparo secuencial:** solo UNA orden de válvula latch puede transmitirse a la
-  vez, con una ventana de exclusión configurable entre disparos. Prohibido el
-  disparo simultáneo de múltiples solenoides.
-- **Reintentos acotados:** un cambio de estado no confirmado se reintenta un
-  número finito de veces con periodo definido; agotados los intentos, el canal
-  entra en reposo prolongado antes de volver a intentar.
-- **Confirmación obligatoria:** un estado se considera real solo cuando el nodo
-  remoto lo confirma. La orden enviada NO actualiza el estado real por sí sola.
+- **Sin actuación simultánea masiva:** el firmware NO DEBE provocar que todas las
+  válvulas de la instalación se accionen a la vez. El controlador ya no dispara
+  solenoides directamente: publica estado en registros que el puente lee y traduce a
+  radio, de modo que la separación entre accionamientos la impone el intervalo de
+  ejecución entre canales del puente. El firmware DEBE respetar esa separación y no
+  anularla con cambios masivos y simultáneos del estado publicado.
+
+- **Re-aserción acotada:** el estado pedido se re-afirma con una cadencia definida en
+  el módulo de configuración, sin escalada y sin reposo prolongado. La re-aserción
+  NUNCA DEBE producir un valor transitorio o intermedio en el estado publicado: un
+  paso por reposo cerraría la válvula y cortaría el riego.
+
+- **Seguridad sin acuse de recibo:** el medio de radio NO confirma la entrega. La
+  garantía de que una válvula no queda abierta indefinidamente se obtiene por la
+  combinación obligatoria de dos mecanismos independientes: (a) la re-aserción acotada
+  del controlador, que da al receptor varias oportunidades de capturar la orden, y
+  (b) el auto-apagado temporizado del actuador, que cierra por sí solo si no recibe
+  una orden nueva dentro de un plazo seguro. Ninguno de los dos basta por separado, y
+  el diseño DEBE documentar cómo se satisface cada uno.
+
+- **Honestidad de la interfaz:** el estado publicado y mostrado al operador es
+  INTENCIÓN, no realidad confirmada. El panel NO DEBE presentarlo como estado real
+  verificado, ni emplear símbolos que sugieran una confirmación del campo que el
+  sistema no puede obtener.
+
 - **Sin ráfagas al reiniciar:** tras un reset por watchdog el firmware DEBE
   reconstruir su estado desde las entradas físicas sin emitir una ráfaga de
   órdenes.
 
-*Racional:* la instalación opera con batería de 12 V / 9 Ah. Cada disparo latch es
-un pico de corriente; una ráfaga de reintentos agota la batería y estresa los
-solenoides. Un fallo de radio no puede convertirse en un fallo de campo.
+*Racional:* la instalación opera con batería de 12 V / 9 Ah y los actuadores están en
+campo, sin operario presente. El sistema es de **lazo abierto por propiedad del medio**:
+el protocolo de radio no acusa recibo, de modo que el controlador nunca sabe si una
+orden llegó. Esa incertidumbre no se puede eliminar, solo acotar. Por eso la seguridad
+deja de descansar en la confirmación del nodo y pasa a descansar en dos mecanismos
+redundantes y de naturaleza distinta: insistencia acotada en el emisor y plazo de
+seguridad en el receptor. Y por eso la interfaz debe ser honesta sobre lo que sabe y lo
+que no: un panel que presenta intención como realidad confirmada induce al operario a
+confiar en algo que nadie ha verificado.
 
 ### III. Arquitectura en Capas con Hardware Abstraído
 
@@ -84,10 +133,10 @@ aplicación (lógica de control)  ->  dominio (estado de válvulas, protocolo)
              puertos (interfaces abstractas)
                           |
                           v
-     adaptadores (Arduino, XBee, LiquidCrystal_I2C, watchdog)
+     adaptadores (Arduino, RS485/Modbus, LiquidCrystal_I2C, watchdog)
 ```
 
-La lógica de control y el dominio NO PUEDEN incluir `<Arduino.h>`, `<XBee.h>`,
+La lógica de control y el dominio NO PUEDEN incluir `<Arduino.h>`,
 `<LiquidCrystal_I2C.h>` ni `<avr/wdt.h>`. Todo acceso a hardware pasa por una
 interfaz declarada en la capa de puertos. Prohibido el estado global mutable
 compartido entre módulos; el estado vive en objetos con propietario único.
@@ -97,10 +146,15 @@ placa, y cada prueba exige subir firmware a un Mega conectado a radios reales.
 
 ### IV. Pruebas en Host Antes que Hardware (NO NEGOCIABLE)
 
-Toda regla de negocio (máquina de estados de válvula, política de reintentos,
-codificación y validación del protocolo XBee, mapeo de índices) DEBE tener prueba
-unitaria ejecutable en el entorno `native` de PlatformIO, sin hardware.
+Toda regla de negocio (máquina de estados de válvula, política de re-aserción,
+tramado y verificador de redundancia del protocolo Modbus, direccionamiento, mapeo
+de índices) DEBE tener prueba unitaria ejecutable en el entorno `native` de
+PlatformIO, sin hardware.
 
+- La lógica de protocolo DEBE ser código puro, sin dependencia del entorno Arduino,
+  de modo que el entorno de pruebas pueda ejercitarla. Queda PROHIBIDO que el
+  tramado, el cálculo o la verificación del verificador de redundancia, y el análisis
+  de peticiones vivan en una capa excluida de las pruebas.
 - Las pruebas se escriben ANTES o JUNTO al código que verifican, nunca después de
   darlo por terminado.
 - Ningún cambio en la lógica de control se da por completo si `pio test -e native`
@@ -110,12 +164,15 @@ unitaria ejecutable en el entorno `native` de PlatformIO, sin hardware.
   de verificación documentada en banco, no con pruebas automatizadas.
 
 *Racional:* el ciclo compilar-cargar-observar en campo cuesta horas. Una prueba en
-host cuesta segundos y detecta la mayoría de los errores de lógica.
+host cuesta segundos y detecta la mayoría de los errores de lógica. La regla sobre
+código puro no es teórica: una migración de transporte se implementó dentro de la capa
+de adaptadores, que el entorno de pruebas excluye, y acumuló 25 defectos —entre ellos
+una inversión de polaridad y una lectura fuera de buffer— con la suite entera en verde.
 
 ### V. Configuración Centralizada, Cero Números Mágicos
 
-Todo parámetro de instalación (direcciones de radio de 64 bits, identificadores de
-válvula, mapeo de pines, tiempos, umbrales, dirección I2C, geometría del LCD) DEBE
+Todo parámetro de instalación (identificadores de válvula, direcciones de registro,
+mapeo de pines, tiempos, umbrales, dirección I2C, geometría del LCD) DEBE
 declararse en un único módulo de configuración, con tipo explícito, unidad en el
 nombre o el comentario, y `constexpr` cuando sea posible.
 
@@ -133,9 +190,8 @@ El firmware DEBE exponer por el puerto serie de depuración, de forma no bloquea
 
 - Identificación de versión y fecha de compilación al arrancar.
 - Causa del último reinicio, incluyendo reset por watchdog.
-- Cada transición de estado de válvula: índice, estado solicitado, número de
-  intento, y confirmación o expiración.
-- Contadores acumulados de errores de radio por canal.
+- Cada transición de estado de válvula: índice, estado solicitado, y re-aserción.
+- Contadores acumulados de errores del bus de comunicación.
 
 Las trazas DEBEN tener nivel de severidad y poder desactivarse en compilación sin
 alterar la lógica. Prohibido que una traza cambie el comportamiento del control.
@@ -169,8 +225,10 @@ proyecto.
   depender del IDE de Arduino o de librerías instaladas globalmente: toda
   dependencia se declara con versión fijada.
 - **Entornos mínimos:** `megaatmega2560` (producción) y `native` (pruebas en host).
-- **Comunicación:** XBee ZigBee en modo API sobre `Serial1` a 9600 baudios; consola
-  de depuración sobre `Serial`. El protocolo de aplicación se documenta en la
+- **Comunicación:** Modbus RTU como **esclavo** sobre RS485, con transceptor MAX485
+  de dirección conmutada por un pin, en `Serial1` a 9600 baudios 8N1; consola de
+  depuración sobre `Serial`. El controlador NUNCA inicia transacciones: solo responde
+  a las peticiones del maestro del bus. El protocolo de aplicación se documenta en la
   especificación, no se infiere del código.
 - **Lenguaje:** C++ con las capacidades soportadas por el avr-gcc del toolchain de
   PlatformIO. Prohibida la asignación dinámica de memoria (`new`, `malloc`,
@@ -219,4 +277,4 @@ violen un principio NO NEGOCIABLE (II y IV) aunque el código funcione. La guía
 operativa de desarrollo en tiempo de ejecución vive en `CLAUDE.md` en la raíz del
 repositorio y no puede contradecir este documento.
 
-**Version**: 1.0.0 | **Ratified**: 2026-08-20 | **Last Amended**: 2026-08-20
+**Version**: 2.0.0 | **Ratified**: 2026-08-20 | **Last Amended**: 2026-08-27
