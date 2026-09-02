@@ -222,7 +222,7 @@ hardware. Las librerías en `lib/` NO pueden incluir librerías de hardware.
 | Variables miembro | `camelCase_` con guion bajo al final | `lastServed_`, `stable_` |
 | Constantes | `kPascalCase` | `kValveCount`, `kLoopPeriodMs` |
 | Macros | `PROYECTO_MAYUSCULAS` | `WIGA_LOG_LEVEL` |
-| Archivos | `snake_case` | `retry_policy.h`, `valve_supervisor.cpp` |
+| Archivos | `snake_case` | `modbus_slave.h`, `valve_publisher.cpp` |
 | Indentación | 4 espacios | |
 | Llaves | K&R (llave de apertura en la misma línea) | |
 | Comentarios | Explican el porqué, no el qué. En español | |

@@ -53,8 +53,8 @@ pio run -e megaatmega2560
 Debe terminar en `SUCCESS` y reportar el uso de memoria:
 
 ```
-RAM:   [==        ]  22.2% (used 1822 bytes from 8192 bytes)
-Flash: [          ]   4.8% (used 12110 bytes from 253952 bytes)
+RAM:   [==        ]  20.5% (used 1682 bytes from 8192 bytes)
+Flash: [          ]   4.6% (used 11806 bytes from 253952 bytes)
 ```
 
 > **Puerta de calidad:** el uso de RAM debe mantenerse por debajo del **75 %**. Si un
@@ -75,7 +75,7 @@ muestra y se fija el puerto con `upload_port` en `platformio.ini`.
 pio test -e native
 ```
 
-71 pruebas, unos 18 segundos, **sin ninguna placa conectada**.
+73 pruebas, unos 18 segundos, **sin ninguna placa conectada**.
 
 En Windows el entorno `native` usa la plataforma `windows_x86`, cuyo compilador descarga
 y gestiona el propio PlatformIO. Por eso no hace falta instalar MinGW ni Visual Studio.
@@ -89,19 +89,52 @@ pio test -e native_posix
 
 `platformio.ini` declara `lib_ignore = wiga_hal` en los entornos de prueba. Eso hace que
 la separación de capas sea una propiedad del build y no una convención: si alguien
-incluye `<Arduino.h>`, `<XBee.h>` o `<LiquidCrystal_I2C.h>` desde `lib/wiga_domain` o
-`lib/wiga_control`, `pio test` falla en el acto con *"No such file or directory"*.
+incluye `<Arduino.h>` o `<LiquidCrystal_I2C.h>` desde `lib/wiga_domain`,
+`lib/wiga_control`, `lib/wiga_config` o `lib/wiga_modbus`, `pio test` falla en el acto
+con *"No such file or directory"*.
 
 Es un comportamiento **deseado**. Comprobarlo lleva 30 segundos:
 
 ```bash
-# añadir #include <Arduino.h> en lib/wiga_control/valve_supervisor.h
+# añadir #include <Arduino.h> en lib/wiga_modbus/modbus_slave.h
 pio test -e native      # debe FALLAR
 # revertir
 pio test -e native      # debe PASAR
 ```
 
-## 5. Consola de diagnóstico
+`lib/wiga_modbus` es la que más importa mantener pura. La migración anterior metió el
+protocolo Modbus dentro de `wiga_hal`, que este mecanismo excluye, y acumuló **25
+defectos** con las 73 pruebas del proyecto en verde: ninguna lo tocaba. El CI comprueba
+la barrera en las dos capas en cada push.
+
+## 5. Verificar el bus sin el UC100
+
+Antes de conectar el puente conviene comprobar que el controlador responde como esclavo
+Modbus. Hace falta un adaptador USB-RS485 y un maestro de escritorio (`mbpoll`,
+QModMaster o el ToolBox de Milesight).
+
+```
+   Arduino Mega 2560            MAX485                 Adaptador USB-RS485
+   TXD2  PH1 (pin 16) ────────▶ DI
+   RXD2  PH0 (pin 17) ◀──────── RO           A ◀──────▶ A
+   DE/RE PH3 (pin  6) ────────▶ DE + RE      B ◀──────▶ B
+                                             GND ◀────▶ GND
+```
+
+```bash
+mbpoll -m rtu -b 9600 -P none -d 8 -s 1 -a 1 -t 4 -r 1 -c 24 COM5
+```
+
+Debe devolver 24 valores que reflejen la posición real de los interruptores del tablero.
+Mover un interruptor debe cambiar solo su registro, tras la ventana de antirrebote.
+
+El procedimiento completo de banco, con los once escenarios y los vectores de trama, está
+en [quickstart.md](../specs/002-modbus-esclavo-rs485/quickstart.md).
+
+> **El escenario decisivo es el B-08**: una hora de sondeo continuo con una válvula
+> regando y **cero** lecturas de `0`. Un solo `0` corta el riego en campo.
+
+## 6. Consola de diagnóstico
 
 ```bash
 pio device monitor -b 9600
@@ -128,6 +161,13 @@ recursiva, válida en C++11. Está previsto en
 
 **Las pruebas no encuentran los dobles de prueba.**
 Los `fake_*.h` viven en `test/mocks` y se exponen con `-Itest/mocks` en `platformio.ini`.
+
+**El controlador no responde a ningún sondeo.**
+Comprobar en este orden: que el identificador de esclavo del UC100 coincide con
+`kModbusSlaveId` (por defecto `1`); que los parámetros serie coinciden (9600 8N1); que
+A y B no están cruzados; y que el pin DE/RE es el 2. Una petición dirigida a otro
+identificador produce **silencio absoluto**, que es el comportamiento correcto y se
+confunde fácilmente con una avería.
 Si se añade un entorno de prueba nuevo, hay que repetir esa bandera.
 
 **El LCD no muestra nada.**
@@ -138,4 +178,4 @@ detiene el control de válvulas**: es deliberado.
 **El firmware arranca pero no transmite nada.**
 Es lo esperado si ninguna entrada ha cambiado. El firmware **no** emite órdenes al
 arrancar, para no golpear la batería tras cada reinicio. Conmutar una entrada del tablero
-y observar el evento `TX` en consola.
+y observar el evento `TX` en consola. Ver [ARQUITECTURA_DEL_FIRMWARE.md](ARQUITECTURA_DEL_FIRMWARE.md) §8.

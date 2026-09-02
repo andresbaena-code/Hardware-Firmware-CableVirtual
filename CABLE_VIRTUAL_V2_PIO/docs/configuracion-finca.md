@@ -6,36 +6,63 @@ Poner en marcha una finca nueva se hace editando **un solo archivo**:
 Si hace falta tocar cualquier otra cosa, el diseño está mal y se corrige el diseño, no el
 mapa.
 
+Para el mapa de registros que consume el UC100, la fuente de verdad es
+[`contracts/register-map.md`](../specs/002-modbus-esclavo-rs485/contracts/register-map.md).
+
 ---
 
 ## Qué es el mapa
 
-Una fila por válvula. El **índice** de la fila es el número de válvula del sistema y
-determina su posición en el panel LCD (tres filas de ocho, en orden).
+Una fila por válvula. El **índice** de la fila es el número de válvula del sistema, y
+determina tres cosas a la vez:
+
+- su posición en el panel LCD (tres filas de ocho, en orden),
+- su **dirección de registro Modbus**,
+- el canal que hay que configurar en el UC100.
 
 ```cpp
 constexpr ValveMapping kMap[] = {
-    //  idx    direccion LSB   id  pin
+    //  idx    direccion LSB   id  pin        pin original
     /*  0 */ { 0x42878FDBUL,   0,  54 },   // A0
     /*  1 */ { 0x42878FDBUL,   1,  55 },   // A1
     ...
 };
 ```
 
-| Campo | Qué es | De dónde sale |
+| Campo | Qué es | Estado |
 |---|---|---|
-| `nodeAddressLsb` | 32 bits bajos de la dirección de 64 bits del nodo | parámetro `SL` del XBee |
-| `valveId` | posición de la válvula dentro del nodo, 0 a 7 | plano de la finca |
-| `inputPin` | pin del Mega conectado a la salida del tablero | plano de conexionado |
+| `inputPin` | Pin del Mega conectado a la salida del tablero | **vigente** |
+| `nodeAddressLsb` | Dirección XBee de la instalación original | **histórico** |
+| `valveId` | Posición dentro del nodo XBee original | **histórico** |
 
-Los 32 bits **altos** de la dirección (`0x0013A200`, prefijo de Digi) son iguales para
-toda la red y se declaran una sola vez en `timing_config.h`.
+### Los campos históricos ya no direccionan nada
+
+`nodeAddressLsb` y `valveId` vienen de la instalación XBee original. **No participan en
+ningún direccionamiento.** Se conservan solo para poder contrastar el mapa contra el plano
+de la finca.
+
+El direccionamiento vigente es Modbus, y el controlador es **un único esclavo** con un
+único identificador, que vive en `timing_config.h` como `kModbusSlaveId`.
+
+> Una versión anterior de este documento afirmaba que `nodeAddressLsb` se usaba como slave
+> ID Modbus y que había que asignar IDs secuenciales por nodo. **Era incorrecto** y venía
+> de suponer que el controlador era el maestro del bus. No lo es: es el esclavo, y el
+> maestro es el UC100.
+
+### La dirección de registro se deriva, no se escribe
+
+```
+registro Modbus de la válvula N  =  N
+```
+
+No hay columna que rellenar. Guardarla sería duplicar el índice y permitir que ambos se
+desincronizasen.
 
 ### Sobre los pines analógicos
 
 Los pines `A0`–`A15` se escriben por su **número digital equivalente** (A0 = 54, …,
 A15 = 69), con el nombre original en el comentario. Así el mapa es idéntico en la placa y
-en las pruebas de host, donde los nombres `A0..A15` no existen.
+en las pruebas de escritorio, donde los nombres `A0..A15` no existen.
 
 | Nombre | Número | | Nombre | Número |
 |---|---|---|---|---|
@@ -50,79 +77,63 @@ en las pruebas de host, donde los nombres `A0..A15` no existen.
 
 ---
 
-## Procedimiento
+## Poner en marcha una finca nueva
 
-1. **Obtener el plano.** Lista de válvulas, con su nodo y su posición dentro del nodo.
-2. **Leer las direcciones.** Con XCTU o la consola AT, leer `SH`/`SL` de cada XBee. Solo
-   se usa `SL`.
-3. **Escribir una fila por válvula**, en el orden en que deben aparecer en el panel.
-4. **Compilar.** `pio run -e megaatmega2560`. Si falla una validación, corregir el mapa.
-   **No** modificar las validaciones.
-5. **Ajustar tiempos** en `timing_config.h` solo si la instalación lo exige. Los valores
-   por defecto son los validados en campo.
-6. **Registrar el cambio en el repositorio.** El mapa de cada finca es parte del historial
-   del proyecto, no un archivo local en el portátil de alguien.
+1. **Obtener el plano.** Lista de válvulas con su posición en el tablero.
+2. **Rellenar el mapa.** Una fila por válvula, con su pin de entrada. El orden de las filas
+   determina el número de válvula, su registro y su posición en el panel.
+3. **Compilar.** Si el mapa es incoherente, **no compila**. Ver la tabla de abajo.
+4. **Configurar el UC100** con un canal por válvula, según
+   [`register-map.md`](../specs/002-modbus-esclavo-rs485/contracts/register-map.md) §5.
+5. **Verificar en banco** antes de ir a campo, siguiendo
+   [puesta-en-marcha.md](puesta-en-marcha.md).
 
 ---
 
-## Lo que el compilador no deja pasar
+## El mapa inválido no compila
 
-Estas seis comprobaciones corren al compilar. Un mapa inválido **no llega a existir como
-firmware**:
+Toda inconsistencia se detecta **al compilar**, no en campo.
 
-| Comprobación | Mensaje |
+| Error en el mapa | Mensaje del compilador |
 |---|---|
 | Mapa vacío | `MAP-V1: mapa de instalacion vacio` |
-| Demasiadas válvulas para el panel | `MAP-V2: demasiadas valvulas para el panel` |
-| **Pin de entrada repetido** | `MAP-V3: pin de entrada duplicado en el mapa` |
-| **Par (dirección, id) repetido** | `MAP-V4: par direccion/id duplicado en el mapa` |
-| `valveId` fuera de 0..7 | `MAP-V5: valveId fuera de rango (0..7)` |
+| Demasiadas válvulas | `MAP-V2: demasiadas valvulas para el panel` |
+| Pin de entrada duplicado | `MAP-V3: pin de entrada duplicado en el mapa` |
+| Par dirección/id duplicado | `MAP-V4: par direccion/id duplicado en el mapa` |
+| `valveId` fuera de rango | `MAP-V5: valveId fuera de rango (0..7)` |
 | Dirección sin asignar | `MAP-V6: direccion de nodo sin asignar` |
+| **Un pin pisa el DE/RE del RS485** | `MAP-V9: un pin de entrada pisa el pin DE/RE del transceptor RS485` |
 
-Las dos marcadas en negrita son las que importan. El firmware anterior mantenía tres
-arreglos paralelos de 24 elementos editados a mano; desplazar un elemento en uno de ellos
-no producía ningún error, producía **una válvula que obedece la orden de otra**, en campo,
-de noche. Es el modo de fallo más caro del sistema y ahora es un error de compilación en
-el escritorio.
-
-El número de válvulas se **deriva** del tamaño del arreglo. No se declara por separado.
+**MAP-V9 es nueva** y cierra un hueco real: si un `inputPin` coincidiera con el pin de
+control de dirección del transceptor (`kRs485DeRePin`, el pin 2), leer un interruptor
+conmutaría el bus a transmisión y el controlador quedaría mudo de forma intermitente,
+imposible de diagnosticar en campo.
 
 ---
 
-## Verificar el mapa antes de dar por buena una migración
+## Parámetros del bus
 
-Compilar no basta: el compilador detecta incoherencias internas, no que una fila apunte
-al nodo equivocado. Antes de sustituir firmware en producción hay que contrastar el mapa
-contra el plano, válvula por válvula, y ejecutar el escenario 7 del
-[quickstart](../specs/001-migracion-platformio/quickstart.md): conmutar las 24 entradas
-una por una y confirmar que se mueve la válvula correcta.
+En [`lib/wiga_config/timing_config.h`](../lib/wiga_config/timing_config.h):
 
-### Pendiente en el mapa heredado
-
-Las filas **18 a 22** comparten el nodo `0x41C3F595` con los identificadores 2, 3, 4, 5 y
-6. Es una combinación válida y pasa todas las comprobaciones, pero es un patrón distinto
-al del resto de nodos, que agrupan sus válvulas en pares o cuartetos con identificadores
-consecutivos desde 0.
-
-**Esto no se ha verificado contra el plano.** Debe confirmarse antes de la puesta en
-producción.
-
----
-
-## Parámetros de tiempo
-
-En [`lib/wiga_config/timing_config.h`](../lib/wiga_config/timing_config.h).
-
-| Constante | Por defecto | Qué controla |
+| Constante | Valor | Qué es |
 |---|---|---|
-| `kLoopPeriodMs` | 15 ms | cadencia del lazo de control |
-| `kDebounceMs` | 50 ms | estabilidad exigida a una entrada antes de actuar |
-| `kLatchGuardMs` | 1 500 ms | separación mínima entre dos disparos |
-| `kRetryIntervalMs` | 30 000 ms | espera de confirmación antes de reintentar |
-| `kBackoffIntervalMs` | 3 600 000 ms | reposo tras agotar los reintentos |
-| `kMaxAttempts` | 5 | reintentos rápidos por cambio de estado |
-| `kLcdI2cAddress` | `0x27` | dirección del panel; algunos módulos usan `0x3F` |
+| `kModbusSlaveId` | `1` | Identificador propio en el bus. Debe coincidir con el que el UC100 tiene configurado en cada canal |
+| `kRadioBaudRate` | `9600` | Debe coincidir con el UC100 |
+| `kModbusSilenceMs` | `4` | Silencio reglamentario entre tramas a 9600 8N1 |
+| `kBusSilentThresholdMs` | `30000` | Sin sondeo durante este plazo, el panel avisa |
+| `kDebounceMs` | `50` | Ventana de antirrebote de los interruptores |
+| `kRs485DeRePin` | `2` | Pin de dirección del MAX485 (en `installation_map.h`) |
 
-Dos de estos valores están protegidos por comprobaciones en compilación: la ventana
-antirebote debe cubrir al menos una vuelta de lazo, y el reposo prolongado debe ser mayor
-que el reintento rápido. Sin esa segunda condición, la protección de batería no existiría.
+---
+
+## Verificación pendiente del mapa heredado
+
+Un mapa correcto en su forma puede seguir estando **mal en la realidad**: si dos filas se
+intercambian, el sistema riega el sector equivocado y compila igual.
+
+> **Pendiente (tarea T055 de la especificación 001).** Las filas **18 a 22** comparten el
+> nodo histórico `0x41C3F595` con los identificadores 2, 3, 4, 5 y 6. Es un patrón distinto
+> al del resto de nodos, que agrupan sus válvulas en pares o cuartetos.
+>
+> Hay que contrastarlo contra el plano de la finca **antes** de sustituir firmware en
+> producción.

@@ -113,29 +113,38 @@ jobs:
       - name: Instalar PlatformIO Core
         run: pip install --upgrade platformio
 
+      # Se comprueban las DOS capas puras. wiga_modbus es la mas importante: es
+      # donde vive el protocolo, y que estuviera del lado no comprobable fue la
+      # causa raiz de los 25 defectos de la migracion anterior.
       - name: Inyectar una violacion del Principio III y exigir que el build falle
         working-directory: ${{ env.PIO_PROJECT_DIR }}
         run: |
-          sed -i '1i #include <Arduino.h>  // violacion deliberada del Principio III' \
-            lib/wiga_control/valve_supervisor.h
+          set -e
+          for objetivo in             lib/wiga_control/valve_publisher.h             lib/wiga_modbus/modbus_slave.h
+          do
+            echo "::group::Barrera de capas en $objetivo"
+            sed -i '1i #include <Arduino.h>  // violacion deliberada del Principio III' "$objetivo"
 
-          if pio test -e native_posix > barrera.log 2>&1; then
-            echo "::error::La capa de control pudo incluir <Arduino.h> y el build siguio."
-            echo "::error::El Principio III ya no esta garantizado por la estructura."
-            echo "Revisar lib_ignore = wiga_hal en platformio.ini."
-            exit 1
-          fi
+            if pio test -e native_posix > barrera.log 2>&1; then
+              echo "::error::$objetivo pudo incluir <Arduino.h> y el build siguio."
+              echo "::error::El Principio III ya no esta garantizado por la estructura."
+              echo "Revisar lib_ignore = wiga_hal en platformio.ini."
+              git checkout -- "$objetivo"
+              exit 1
+            fi
 
-          if ! grep -q "Arduino.h" barrera.log; then
-            echo "::error::El build fallo, pero no por la inclusion de Arduino.h."
-            tail -40 barrera.log
-            exit 1
-          fi
+            if ! grep -q "Arduino.h" barrera.log; then
+              echo "::error::El build fallo, pero no por la inclusion de Arduino.h."
+              tail -40 barrera.log
+              git checkout -- "$objetivo"
+              exit 1
+            fi
 
-          echo "Correcto: incluir <Arduino.h> en wiga_control rompe la compilacion de pruebas."
+            git checkout -- "$objetivo"
+            echo "Correcto: incluir <Arduino.h> en $objetivo rompe la compilacion."
+            echo "::endgroup::"
+          done
 
-      - name: Revertir y confirmar que la suite vuelve a pasar
+      - name: Confirmar que la suite vuelve a pasar tras revertir
         working-directory: ${{ env.PIO_PROJECT_DIR }}
-        run: |
-          git checkout -- lib/wiga_control/valve_supervisor.h
-          pio test -e native_posix
+        run: pio test -e native_posix
