@@ -132,8 +132,10 @@ void test_el_tablero_es_activo_en_alto(void) {
     TEST_ASSERT_EQUAL_UINT16(1, sys.registers.get(config::valveRegister(2)));
 
     // Pin en pull-down  ->  no se pide riego  ->  registro 0
+    // El cierre llega poco despues de la apertura en el mismo UC511, asi que
+    // espera su turno (spec 003, FR-204): se deja pasar el intervalo.
     sys.inputs.set(2, SignalLevel::Low);
-    sys.settle();
+    sys.settle(config::kCommandSpacingMs + config::kDebounceMs * 3);
     TEST_ASSERT_EQUAL_UINT16(0, sys.registers.get(config::valveRegister(2)));
 }
 
@@ -162,7 +164,9 @@ void test_las_24_valvulas_se_publican(void) {
     for (uint8_t i = 0; i < config::kValveCount; ++i) {
         sys.inputs.requestOpen(i);
     }
-    sys.settle();
+    // La segunda valvula de cada UC511 sale un intervalo despues de la primera
+    // (spec 003, FR-204): se deja pasar antes de comprobar las 24.
+    sys.settle(config::kCommandSpacingMs + config::kDebounceMs * 3);
 
     for (uint8_t i = 0; i < config::kValveCount; ++i) {
         TEST_ASSERT_EQUAL_UINT16(1, sys.pollValve(i, sys.clock.nowMs() + i));

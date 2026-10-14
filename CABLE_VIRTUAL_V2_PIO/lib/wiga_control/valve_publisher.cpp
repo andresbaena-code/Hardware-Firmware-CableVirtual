@@ -1,4 +1,5 @@
 // Cubre: FR-109, FR-110, FR-111, FR-112, FR-114b, FR-115, FR-116, FR-119, FR-122
+//        FR-204, FR-205, FR-209, FR-216  (spec 003)
 #include "valve_publisher.h"
 
 namespace wiga {
@@ -23,6 +24,7 @@ void ValvePublisher::begin() {
     const uint32_t now = clock_.nowMs();
     inputs_.configure();
 
+    ValveState seeded[config::kValveCount];
     for (uint8_t i = 0; i < config::kValveCount; ++i) {
         const SignalLevel level = inputs_.read(i);
         // FR-112: se interpreta el CABLEADO DEL TABLERO. La inversion por
@@ -33,7 +35,11 @@ void ValvePublisher::begin() {
         // El banco queda sembrado ANTES de que el lazo atienda el bus, de modo
         // que el primer sondeo ya devuelva el estado fisico correcto.
         registers_.set(config::valveRegister(i), registerValueOf(state));
+        seeded[i] = state;
     }
+    // El separador parte del mismo estado que el banco: si no, veria como
+    // cambio pendiente lo que ya esta publicado.
+    spacer_.begin(seeded, now);
     refreshDisplay();
 
     // Forzar el primer refresco de la linea de estado: al arrancar,
@@ -52,24 +58,39 @@ void ValvePublisher::tick() {
 
 // --- FR-122: muestreo del tablero --------------------------------------------
 void ValvePublisher::pollInputs(uint32_t nowMs) {
+    // Valvulas cuyo cambio quedo pendiente EN ESTA vuelta, para avisar una sola
+    // vez de la espera y no en cada vuelta mientras dura.
+    static_assert(config::kValveCount <= 32, "la mascara de pendientes es de 32 bits");
+    uint32_t queuedNow = 0;
+
     for (uint8_t i = 0; i < config::kValveCount; ++i) {
         const SignalLevel raw = inputs_.read(i);
-        if (!debouncers_[i].update(raw, nowMs, config::kDebounceMs)) {
-            continue;  // sin cambio estable
-        }
+        debouncers_[i].update(raw, nowMs, config::kDebounceMs);
 
-        // FR-116: el registro solo se escribe cuando el antirrebote confirma un
-        // nivel DISTINTO. Nunca hay un valor intermedio, y nunca se pone a cero
-        // por iniciativa propia: solo lo hace el operador con el interruptor.
-        const ValveState state = config::panelRequest(debouncers_[i].stable());
-        const uint16_t   value = registerValueOf(state);
-        const uint16_t   reg   = config::valveRegister(i);
-
-        if (registers_.get(reg) == value) {
-            continue;
+        // El deseado se informa en CADA vuelta, no solo en el flanco: un cambio
+        // retenido por su UC511 se publica varias vueltas despues.
+        const ValveState desired = config::panelRequest(debouncers_[i].stable());
+        if (spacer_.update(i, desired, nowMs) == CommandSpacer::Outcome::Queued) {
+            queuedNow |= (uint32_t{1} << i);
         }
-        registers_.set(reg, value);
-        log_.event(LogLevel::Info, logtag::kTx, i, static_cast<int32_t>(value));
+    }
+
+    // FR-116, FR-209: el registro SOLO se escribe con lo que autoriza el
+    // separador, y lo que autoriza es siempre lo que el tablero pide. Nunca hay
+    // un valor intermedio ni un cero por iniciativa propia.
+    ValveIndex index;
+    ValveState state;
+    while (spacer_.next(nowMs, index, state)) {
+        const uint16_t value = registerValueOf(state);
+        registers_.set(config::valveRegister(index), value);
+        log_.event(LogLevel::Info, logtag::kTx, index, static_cast<int32_t>(value));
+    }
+
+    for (uint8_t i = 0; i < config::kValveCount; ++i) {
+        if ((queuedNow & (uint32_t{1} << i)) != 0 && spacer_.pending(i)) {
+            log_.event(LogLevel::Info, logtag::kWait, i,
+                       static_cast<int32_t>(config::actuatorOf(i)));
+        }
     }
 }
 

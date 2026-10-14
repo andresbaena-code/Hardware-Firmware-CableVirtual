@@ -4,6 +4,7 @@
 
 void run_debouncer_tests(void);
 void run_time_wraparound_tests(void);
+void run_command_spacer_tests(void);
 
 void setUp(void) {}
 void tearDown(void) {}
@@ -12,5 +13,6 @@ int main(int, char**) {
     UNITY_BEGIN();
     run_debouncer_tests();
     run_time_wraparound_tests();
+    run_command_spacer_tests();
     return UNITY_END();
 }

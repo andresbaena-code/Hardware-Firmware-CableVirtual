@@ -17,6 +17,11 @@ constexpr char kVersion[] = "VER";   ///< version de firmware
 constexpr char kTx[]      = "TX";    ///< el nivel pedido por el tablero cambio
 constexpr char kDrop[]    = "DROP";  ///< trama descartada / salud del panel
 constexpr char kLcd[]     = "LCD";   ///< panel marcado como no sano
+
+// Separacion de comandos por UC511 (spec 003). Cubre: FR-213, FR-216
+constexpr char kWait[]         = "WAIT";    ///< cambio retenido hasta el turno de su UC511
+constexpr char kCancel[]       = "CANC";    ///< cambio pendiente revertido por el tablero
+constexpr char kNotInstalled[] = "NOINST";  ///< pedido sobre una valvula de UC511 no instalado
 }  // namespace logtag
 
 class ILogPort {

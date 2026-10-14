@@ -104,6 +104,28 @@ constexpr uint32_t kRetryIntervalMs   = 30000UL;    ///< espera de reintento rap
 constexpr uint32_t kBackoffIntervalMs = 3600000UL;  ///< reposo prolongado, 60 min (heredado)
 constexpr uint8_t  kMaxAttempts       = 5;          ///< intentos rapidos (heredado)
 
+// --- Separacion de comandos por UC511 ---------------------------------------
+//  Cubre: FR-214  (specs/003-retardo-apertura-cancelable, research.md R-308)
+//
+//  Un UC511 acciona dos valvulas latch con un pulso de 12 V / 50 ms, y pierde
+//  sin aviso el segundo de dos comandos que le lleguen con menos de 5 s entre
+//  ellos (medido en el piloto; lo mas probable es la recarga del condensador
+//  del pulso). A equipos distintos no les pasa.
+
+/// Separacion minima que tolera un UC511 entre dos comandos. Dato de campo,
+/// no del fabricante: si una medicion nueva lo cambia, se cambia aqui.
+constexpr uint32_t kActuatorMinGapMs = 5000UL;
+
+/// Separacion que el controlador impone entre dos cambios publicados del mismo
+/// UC511. Los 3 s sobre el minimo absorben la latencia del sondeo del UC100
+/// (~1 s medida): dos cambios publicados a 8 s pueden llegar al campo algo mas
+/// juntos de lo que salieron.
+constexpr uint32_t kCommandSpacingMs = 8000UL;
+
+static_assert(kCommandSpacingMs >= kActuatorMinGapMs,
+              "TC-01: la separacion entre comandos no puede ser menor que la "
+              "que tolera el UC511, o el segundo comando se pierde en campo");
+
 // --- Presupuesto por vuelta de lazo -----------------------------------------
 constexpr uint8_t  kMaxFramesPerPoll    = 4;  ///< tramas drenadas por vuelta (R-002)
 constexpr uint8_t  kDisplayCellsPerTick = 1;  ///< celdas de LCD escritas por vuelta (R-007)

@@ -1,12 +1,17 @@
 // -----------------------------------------------------------------------------
 //  Publicador de valvulas: lee el tablero y publica lo que pide.
 //  Cubre: FR-109, FR-110, FR-111, FR-112, FR-114b, FR-115, FR-116, FR-119, FR-122
+//         FR-204, FR-205, FR-209  (spec 003)
 //
 //  Sustituye a ValveSupervisor. Al no existir confirmacion del campo -el
 //  protocolo de radio no acusa recibo- desaparecen la politica de reintentos,
 //  el planificador de disparo y las fases de espera. Lo que queda es:
 //
-//      leer 24 interruptores -> antirrebote -> publicar 24 registros
+//      leer 24 interruptores -> antirrebote -> separador por UC511
+//                            -> publicar 24 registros
+//
+//  El separador (spec 003) solo decide CUANDO se publica un cambio: dos cambios
+//  del mismo UC511 nunca salen con menos de kCommandSpacingMs entre ellos.
 //
 //  FR-116 ES EL REQUISITO DOMINANTE: el registro de una valvula que riega no
 //  puede presentar JAMAS un 0 transitorio. Un solo sondeo que lea 0 cierra la
@@ -20,6 +25,7 @@
 
 #include <stdint.h>
 
+#include "command_spacer.h"
 #include "debouncer.h"
 #include "i_clock.h"
 #include "i_digital_input_port.h"
@@ -81,7 +87,8 @@ private:
     IDisplayPort&         display_;
     ILogPort&             log_;
 
-    Debouncer debouncers_[config::kValveCount];
+    Debouncer     debouncers_[config::kValveCount];
+    CommandSpacer spacer_;
     char      shownSymbol_[config::kValveCount];
     bool      busHealthy_ = true;
     bool      shownBusHealthy_ = true;

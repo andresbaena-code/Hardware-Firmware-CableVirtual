@@ -7,6 +7,7 @@
 #include <unity.h>
 
 #include "installation_map.h"
+#include "timing_config.h"
 
 using namespace wiga;
 using namespace wiga::config;
@@ -122,6 +123,107 @@ static void test_mapa_de_la_instalacion_vigente(void) {
     TEST_ASSERT_EQUAL_UINT8(22, findValveIndex(0x41C3F595UL, 6));
 }
 
+// =============================================================================
+//  Spec 003: mapa de equipos UC511
+//  Verifica: FR-201, FR-202, FR-203, FR-214
+// =============================================================================
+
+//                                    dir    id pin  equipo salida
+constexpr ValveMapping kEquiposSano[] = {
+    {0x11111111UL, 0, 10, 1, 1},
+    {0x11111111UL, 1, 11, 1, 2},
+    {0x22222222UL, 0, 12, 2, 1},
+};
+
+constexpr ValveMapping kEquipoFueraDeRango[] = {
+    {0x11111111UL, 0, 10, 3, 1},   // solo hay 2 equipos
+};
+
+constexpr ValveMapping kEquipoCero[] = {
+    {0x11111111UL, 0, 10, 0, 1},   // equipo sin asignar
+};
+
+constexpr ValveMapping kSalidaInvalida[] = {
+    {0x11111111UL, 0, 10, 1, 3},   // el UC511 solo tiene salidas 1 y 2
+};
+
+constexpr ValveMapping kSalidaDuplicada[] = {
+    {0x11111111UL, 0, 10, 1, 1},
+    {0x11111111UL, 1, 11, 1, 1},   // misma salida del mismo equipo
+};
+
+constexpr ValveMapping kTresEnUnEquipo[] = {
+    {0x11111111UL, 0, 10, 1, 1},
+    {0x11111111UL, 1, 11, 1, 2},
+    {0x11111111UL, 2, 12, 1, 2},   // tercera valvula en el equipo 1
+};
+
+// --- MAP-V13 -----------------------------------------------------------------
+static void test_FR202_detecta_equipo_fuera_de_rango(void) {
+    TEST_ASSERT_FALSE(detail::allActuatorsInRange(kEquipoFueraDeRango, 1, 2));
+    TEST_ASSERT_FALSE(detail::allActuatorsInRange(kEquipoCero, 1, 2));
+    TEST_ASSERT_TRUE(detail::allActuatorsInRange(kEquiposSano, 3, 2));
+}
+
+// --- MAP-V14 -----------------------------------------------------------------
+static void test_FR202_detecta_salida_invalida(void) {
+    TEST_ASSERT_FALSE(detail::allOutputsValid(kSalidaInvalida, 1));
+    TEST_ASSERT_TRUE(detail::allOutputsValid(kEquiposSano, 3));
+}
+
+// --- MAP-V15 -----------------------------------------------------------------
+static void test_FR202_detecta_salida_duplicada_en_un_equipo(void) {
+    TEST_ASSERT_TRUE(detail::hasDuplicateActuatorOutput(kSalidaDuplicada, 2));
+    TEST_ASSERT_FALSE(detail::hasDuplicateActuatorOutput(kEquiposSano, 3));
+}
+
+// --- MAP-V16 -----------------------------------------------------------------
+static void test_FR202_detecta_equipo_con_mas_de_dos_valvulas(void) {
+    TEST_ASSERT_FALSE(detail::noActuatorOverloaded(kTresEnUnEquipo, 3, 1));
+    TEST_ASSERT_TRUE(detail::noActuatorOverloaded(kEquiposSano, 3, 2));
+}
+
+// --- MAP-V17 -----------------------------------------------------------------
+static void test_FR202_detecta_equipo_declarado_sin_valvulas(void) {
+    TEST_ASSERT_FALSE(detail::everyActuatorUsed(kEquiposSano, 3, 3));  // el 3 sobra
+    TEST_ASSERT_TRUE(detail::everyActuatorUsed(kEquiposSano, 3, 2));
+}
+
+static void test_FR201_cada_valvula_declara_equipo_y_salida(void) {
+    for (uint8_t i = 0; i < kValveCount; ++i) {
+        TEST_ASSERT_TRUE(actuatorOf(i) >= 1 && actuatorOf(i) <= kActuatorCount);
+        TEST_ASSERT_TRUE(outputOf(i) == 1 || outputOf(i) == 2);
+    }
+}
+
+/// Atada a la instalacion, como test_mapa_de_la_instalacion_vigente: AL
+/// CONFIGURAR UNA FINCA NUEVA se actualiza junto con installation_map.h.
+static void test_FR201_mapa_piloto_v01_a_v08_en_uc511_1_a_4(void) {
+    // Pares consecutivos: las valvulas 2k y 2k+1 van al equipo k+1, salidas 1 y 2.
+    for (uint8_t i = 0; i < kValveCount; ++i) {
+        TEST_ASSERT_EQUAL_UINT8(i / 2 + 1, actuatorOf(i));
+        TEST_ASSERT_EQUAL_UINT8(i % 2 + 1, outputOf(i));
+    }
+}
+
+static void test_FR203_equipos_1_a_4_instalados_5_a_12_no(void) {
+    TEST_ASSERT_EQUAL_UINT8(12, kActuatorCount);
+    for (uint8_t a = 1; a <= 4; ++a)  TEST_ASSERT_TRUE(actuatorInstalled(a));
+    for (uint8_t a = 5; a <= 12; ++a) TEST_ASSERT_FALSE(actuatorInstalled(a));
+    // Fuera de rango nunca cuenta como instalado.
+    TEST_ASSERT_FALSE(actuatorInstalled(0));
+    TEST_ASSERT_FALSE(actuatorInstalled(13));
+}
+
+static void test_FR214_separacion_no_menor_que_minimo_del_actuador(void) {
+    TEST_ASSERT_EQUAL_UINT32(5000UL, kActuatorMinGapMs);
+    TEST_ASSERT_EQUAL_UINT32(8000UL, kCommandSpacingMs);
+    TEST_ASSERT_TRUE(kCommandSpacingMs >= kActuatorMinGapMs);
+}
+
+static_assert(detail::hasDuplicateActuatorOutput(kSalidaDuplicada, 2),
+              "debe detectar la salida repetida en tiempo de compilacion");
+
 // Las funciones deben ser utilizables en contexto constexpr: es lo que permite
 // que el error se detecte al compilar y no en campo.
 static_assert(!detail::hasDuplicatePin(kSano, 3), "el mapa sano no tiene pines repetidos");
@@ -139,4 +241,13 @@ void run_config_tests(void) {
     RUN_TEST(test_rechaza_nodo_no_configurado);
     RUN_TEST(test_rechaza_id_no_configurado_en_nodo_conocido);
     RUN_TEST(test_mapa_de_la_instalacion_vigente);
+    RUN_TEST(test_FR202_detecta_equipo_fuera_de_rango);
+    RUN_TEST(test_FR202_detecta_salida_invalida);
+    RUN_TEST(test_FR202_detecta_salida_duplicada_en_un_equipo);
+    RUN_TEST(test_FR202_detecta_equipo_con_mas_de_dos_valvulas);
+    RUN_TEST(test_FR202_detecta_equipo_declarado_sin_valvulas);
+    RUN_TEST(test_FR201_cada_valvula_declara_equipo_y_salida);
+    RUN_TEST(test_FR201_mapa_piloto_v01_a_v08_en_uc511_1_a_4);
+    RUN_TEST(test_FR203_equipos_1_a_4_instalados_5_a_12_no);
+    RUN_TEST(test_FR214_separacion_no_menor_que_minimo_del_actuador);
 }
