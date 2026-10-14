@@ -153,6 +153,28 @@ void test_FR206_del_pin_al_registro_pedido_revertido_no_publica(void) {
     TEST_ASSERT_EQUAL_UINT16(1, sys.log.countOf(logtag::kCancel, 1));
 }
 
+/// Caso reportado en banco el 2026-10-14: prender V01 y apagarla a los 3 s. El
+/// cierre debe publicarse exactamente un intervalo despues de la apertura.
+void test_FR204_del_pin_al_registro_prender_y_apagar_a_los_3s(void) {
+    System sys;
+    sys.boot();
+    sys.inputs.requestOpen(0);
+    const uint32_t openedAt = sys.runUntil(0, 1, 1000);
+    TEST_ASSERT_NOT_EQUAL(0, openedAt);
+
+    sys.run(3000);
+    sys.inputs.requestClose(0);
+    while (sys.clock.nowMs() - openedAt < config::kCommandSpacingMs - kStep) {
+        sys.clock.advance(kStep);
+        sys.publisher.tick();
+        TEST_ASSERT_EQUAL_UINT16(1, sys.reg(0));  // el cierre espera su turno
+    }
+    const uint32_t closedAt = sys.runUntil(0, 0, 1000);
+    TEST_ASSERT_NOT_EQUAL(0, closedAt);
+    TEST_ASSERT_EQUAL_UINT32(config::kCommandSpacingMs, closedAt - openedAt);
+    TEST_ASSERT_EQUAL_UINT16(1, sys.log.countOf(logtag::kWait, 0));
+}
+
 // --- US4: equipos no instalados (V09 = indice 8, UC511 #05) ------------------
 constexpr uint8_t kNotInstalledValve = 8;
 
@@ -204,6 +226,7 @@ void run_separacion_uc511_tests(void) {
     RUN_TEST(test_FR211_reinicio_con_v01_regando_registro_en_1_antes_del_bus);
     RUN_TEST(test_FR211_cambio_tras_arranque_respeta_el_intervalo);
     RUN_TEST(test_FR206_del_pin_al_registro_pedido_revertido_no_publica);
+    RUN_TEST(test_FR204_del_pin_al_registro_prender_y_apagar_a_los_3s);
     RUN_TEST(test_FR212_valvula_de_equipo_no_instalado_publica_siempre_cero);
     RUN_TEST(test_FR213_aviso_noinst_una_vez_por_pedido);
     RUN_TEST(test_FR215_panel_muestra_guion_en_equipo_no_instalado);

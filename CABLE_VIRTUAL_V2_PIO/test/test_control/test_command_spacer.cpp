@@ -318,24 +318,27 @@ void test_FR207_dos_aperturas_simultaneas_primero_menor_indice(void) {
 /// intervalos. Es el peor caso posible con dos valvulas por equipo.
 void test_FR207_peor_caso_un_cierre_adelanta_dos_veces(void) {
     Spacer sp;
-    sp.request(kV01, ValveState::Open, kT);                 // turno en kT
-    sp.s.update(kV02, ValveState::Open, kT + 1000);        // espera a kT + 8 s
-    sp.s.update(kV01, ValveState::Closed, kT + 7900);      // cierre: prioridad
-    TEST_ASSERT_EQUAL_UINT8(1, sp.drain(kT + kSpacing));   // sale el cierre de V01
+    sp.request(kV01, ValveState::Open, kT);                       // turno en kT
+    sp.s.update(kV02, ValveState::Open, kT + 1000);              // espera
+    sp.s.update(kV01, ValveState::Closed, kT + kSpacing - 100);  // cierre: prioridad
+    TEST_ASSERT_EQUAL_UINT8(1, sp.drain(kT + kSpacing));         // sale el cierre de V01
     TEST_ASSERT_EQUAL_UINT8(kV01, sp.lastIndex);
 
-    sp.s.update(kV01, ValveState::Open, kT + 9000);        // V01 vuelve a pedir
+    const uint32_t v01Asks = kT + kSpacing + 1000;               // V01 vuelve a pedir
+    sp.s.update(kV01, ValveState::Open, v01Asks);
     TEST_ASSERT_EQUAL_UINT8(1, sp.drain(kT + 2 * kSpacing));
-    TEST_ASSERT_EQUAL_UINT8(kV02, sp.lastIndex);           // V02 era mas antigua
+    TEST_ASSERT_EQUAL_UINT8(kV02, sp.lastIndex);                 // V02 era mas antigua
 
     sp.s.update(kV02, ValveState::Closed, kT + 2 * kSpacing + 1000);  // cierre
     TEST_ASSERT_EQUAL_UINT8(1, sp.drain(kT + 3 * kSpacing));
-    TEST_ASSERT_EQUAL_UINT8(kV02, sp.lastIndex);           // adelanta a V01
+    TEST_ASSERT_EQUAL_UINT8(kV02, sp.lastIndex);                 // adelanta a V01
 
     TEST_ASSERT_EQUAL_UINT8(1, sp.drain(kT + 4 * kSpacing));
     TEST_ASSERT_EQUAL_UINT8(kV01, sp.lastIndex);
-    // V01 pidio en kT + 9000 y salio en kT + 32000: 23 s, menos de 3 intervalos.
-    TEST_ASSERT_TRUE(4 * kSpacing - 9000 < 3 * kSpacing);
+    // V01 espero casi 3 intervalos, pero no los alcanzo.
+    const uint32_t waited = kT + 4 * kSpacing - v01Asks;
+    TEST_ASSERT_TRUE(waited > 2 * kSpacing);
+    TEST_ASSERT_TRUE(waited < 3 * kSpacing);
 }
 
 /// Una hora simulada con el tablero cambiando al azar las dos valvulas del

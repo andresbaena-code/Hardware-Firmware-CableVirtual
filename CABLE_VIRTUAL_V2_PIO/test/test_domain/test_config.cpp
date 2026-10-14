@@ -216,8 +216,11 @@ static void test_FR203_equipos_1_a_4_instalados_5_a_12_no(void) {
 }
 
 static void test_FR214_separacion_no_menor_que_minimo_del_actuador(void) {
-    TEST_ASSERT_EQUAL_UINT32(5000UL, kActuatorMinGapMs);
-    TEST_ASSERT_EQUAL_UINT32(8000UL, kCommandSpacingMs);
+    // Medido en banco el 2026-10-14: a 8 s el cierre tras una apertura se
+    // pierde, a 15 s llega.
+    TEST_ASSERT_EQUAL_UINT32(15000UL, kActuatorMinGapMs);
+    TEST_ASSERT_EQUAL_UINT32(15000UL, kCommandSpacingMs);
+    TEST_ASSERT_TRUE(kCommandSpacingMs > 8000UL);
     TEST_ASSERT_TRUE(kCommandSpacingMs >= kActuatorMinGapMs);
 }
 

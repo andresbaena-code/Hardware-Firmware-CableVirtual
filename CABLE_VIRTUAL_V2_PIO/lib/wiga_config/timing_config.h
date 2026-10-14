@@ -108,19 +108,27 @@ constexpr uint8_t  kMaxAttempts       = 5;          ///< intentos rapidos (hered
 //  Cubre: FR-214  (specs/003-retardo-apertura-cancelable, research.md R-308)
 //
 //  Un UC511 acciona dos valvulas latch con un pulso de 12 V / 50 ms, y pierde
-//  sin aviso el segundo de dos comandos que le lleguen con menos de 5 s entre
-//  ellos (medido en el piloto; lo mas probable es la recarga del condensador
-//  del pulso). A equipos distintos no les pasa.
+//  sin aviso el segundo de dos comandos que le lleguen demasiado juntos (lo mas
+//  probable es la recarga del condensador del pulso). A equipos distintos no
+//  les pasa. Medido en el piloto:
+//
+//      cierre  -> apertura : funciona desde 5 s
+//      apertura -> cierre  : a 8 s el cierre se PIERDE; a 15 s llega
+//                            (banco, 2026-10-14)
+//
+//  La apertura deja el condensador mas descargado que el cierre. Como la
+//  separacion es una sola para los dos sentidos, manda el caso peor.
 
-/// Separacion minima que tolera un UC511 entre dos comandos. Dato de campo,
-/// no del fabricante: si una medicion nueva lo cambia, se cambia aqui.
-constexpr uint32_t kActuatorMinGapMs = 5000UL;
+/// Separacion minima que tolera un UC511 entre dos comandos, en el sentido mas
+/// exigente (apertura -> cierre). Dato de campo, no del fabricante: el limite
+/// real esta entre 8 y 15 s y no se ha medido con mas detalle. Si una medicion
+/// nueva lo precisa, se cambia aqui.
+constexpr uint32_t kActuatorMinGapMs = 15000UL;
 
 /// Separacion que el controlador impone entre dos cambios publicados del mismo
-/// UC511. Los 3 s sobre el minimo absorben la latencia del sondeo del UC100
-/// (~1 s medida): dos cambios publicados a 8 s pueden llegar al campo algo mas
-/// juntos de lo que salieron.
-constexpr uint32_t kCommandSpacingMs = 8000UL;
+/// UC511. 15 s es el valor que funciono en banco; la latencia del UC100 (~1 s)
+/// queda cubierta porque a 8 s ya se sabe que no basta y 15 s si.
+constexpr uint32_t kCommandSpacingMs = 15000UL;
 
 static_assert(kCommandSpacingMs >= kActuatorMinGapMs,
               "TC-01: la separacion entre comandos no puede ser menor que la "

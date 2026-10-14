@@ -37,7 +37,7 @@ Consola serie a 9600 abierta.
 | # | Acción en el tablero | Se debe ver |
 |---|---|---|
 | B-1 | subir V01 | reg 0 = `1` en el siguiente sondeo; consola `TX 0 1` |
-| B-2 | con V01 arriba > 8 s: bajar V01 y subir V02 a la vez | reg 0 = `0` al instante; consola `WAIT 1`; reg 1 = `1` ~8 s después |
+| B-2 | con V01 arriba > 15 s: bajar V01 y subir V02 a la vez | reg 0 = `0` al instante; consola `WAIT 1`; reg 1 = `1` ~15 s después |
 | B-3 | bajar V02 y subir V03 a la vez | reg 1 y reg 2 cambian en el mismo sondeo |
 | B-4 | inmediatamente tras B-3, subir y bajar V04 en 3 s | reg 3 nunca vale `1`; consola `CANC 3` |
 | B-5 | subir V09 | reg 8 sigue en `0`; LCD muestra `-` en V09; consola `NOINST 8` una sola vez |
@@ -56,7 +56,7 @@ coincide con el mapa: V01/V02 en el UC511 #01, salidas 1/2, y así con los demá
 | C-3 | 10 pedidos revertidos dentro del intervalo | ninguna válvula se mueve | SC-203 |
 | C-4 | 10 cierres pedidos 3 s después de abrir | las 10 cierran | SC-203 |
 | C-5 | 10 reinicios con válvulas regando | ninguna cierra | SC-204 |
-| C-6 | secuencia completa de un bloque (7 + 7 min) | primera 7:00, segunda 6:52 ± 2 s | SC-206 |
+| C-6 | secuencia completa de un bloque (7 + 7 min) | primera 7:00, segunda 6:45 ± 2 s | SC-206 |
 
 Registrar los resultados en `docs/acta-pruebas-banco.md`, en un bloque nuevo para la
 spec 003.

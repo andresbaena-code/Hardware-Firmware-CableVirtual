@@ -26,8 +26,8 @@ Se declara en `kActuators[]`; la posición en el arreglo + 1 es el número de eq
 
 | Constante | Valor | Unidad | Requisito |
 |---|---|---|---|
-| `kActuatorMinGapMs` | 5000 | ms | FR-214 |
-| `kCommandSpacingMs` | 8000 | ms | FR-214 |
+| `kActuatorMinGapMs` | 15000 | ms | FR-214 |
+| `kCommandSpacingMs` | 15000 | ms | FR-214 |
 
 ### 1.4 Validaciones
 

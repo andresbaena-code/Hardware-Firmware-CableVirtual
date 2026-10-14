@@ -90,7 +90,7 @@ del intervalo en curso, más como mucho dos turnos de la otra válvula de su equ
 por antigüedad (un pedido suyo más antiguo) y otro por prioridad (un cierre que la otra
 válvula pida después). No puede haber un tercero: el siguiente pedido de la otra
 válvula sería más nuevo, y si nuestro pendiente es un cierre, un cierre ajeno no le gana
-por prioridad. Cota: **menos de 3 × intervalo** (24 s).
+por prioridad. Cota: **menos de 3 × intervalo** (45 s con 15 s).
 
 El plan decía 2 × intervalo. La prueba
 `test_FR207_peor_caso_un_cierre_adelanta_dos_veces` reproduce una espera de 23 s, y
@@ -138,8 +138,8 @@ confirmación del campo: respeta la regla de honestidad de la interfaz.
 **Decisión** en `lib/wiga_config/timing_config.h`:
 
 ```text
-kActuatorMinGapMs  = 5000   // separación mínima medida del UC511
-kCommandSpacingMs  = 8000   // intervalo de separación aplicado
+kActuatorMinGapMs  = 15000  // separación medida que funciona (apertura -> cierre)
+kCommandSpacingMs  = 15000  // intervalo de separación aplicado
 static_assert(kCommandSpacingMs >= kActuatorMinGapMs)
 ```
 

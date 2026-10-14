@@ -82,8 +82,8 @@ en las pruebas de escritorio, donde los nombres `A0..A15` no existen.
 ### Equipos UC511 y separación de comandos (spec 003)
 
 Un UC511 acciona dos válvulas y pierde sin aviso el segundo de dos comandos que le lleguen
-con menos de 5 s entre ellos. El firmware lo evita: nunca publica dos cambios de válvulas
-del **mismo** UC511 con menos de 8 s (`kCommandSpacingMs` en `timing_config.h`). Para eso
+demasiado juntos (Medido en banco el 2026-10-14: tras una apertura, un cierre a 8 s se pierde y a 15 s llega; entre cierre y apertura bastan 5 s.) El firmware lo evita: nunca publica dos cambios de válvulas
+del **mismo** UC511 con menos de 15 s (`kCommandSpacingMs` en `timing_config.h`). Para eso
 necesita saber qué válvulas comparten equipo, y lo saca de `actuator` y `output`.
 
 Los equipos se declaran aparte, en `kActuators`, con una marca de instalado. Su posición

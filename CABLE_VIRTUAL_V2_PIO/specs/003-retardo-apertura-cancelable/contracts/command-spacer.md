@@ -63,7 +63,7 @@ argumento.
 
 ## 5. Vectores de prueba (host)
 
-Intervalo 8000 ms. V01/V02 en el equipo 1, V03 en el equipo 2. Antirrebote ya resuelto.
+Tiempos escritos para un intervalo de 8000 ms; las pruebas usan `kCommandSpacingMs` (hoy 15000 ms) y escalan igual. V01/V02 en el equipo 1, V03 en el equipo 2. Antirrebote ya resuelto.
 
 | # | Secuencia | Esperado |
 |---|---|---|
@@ -78,4 +78,4 @@ Intervalo 8000 ms. V01/V02 en el equipo 1, V03 en el equipo 2. Antirrebote ya re
 | 9 | último cambio en t=0xFFFFF000; nuevo pedido en t+1000 | se publica en 0xFFFFF000 + 8000 (con desbordamiento) |
 | 10 | arranque con V01 en `1`; V02 sube en t=2000 | V01=`1` antes del primer sondeo; V02=`1` en t=8000 |
 | 11 | sube V09 (equipo 5 no instalado) | registro 8 sigue en `0`; una traza `NOINST`; panel `-` |
-| 12 | peor caso de espera (pendientes cruzados en un equipo) | ningún pendiente llega a 24000 ms (peor caso reproducido: 23000 ms) |
+| 12 | peor caso de espera (pendientes cruzados en un equipo) | ningún pendiente llega a 3 intervalos |

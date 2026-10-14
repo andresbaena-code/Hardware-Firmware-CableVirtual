@@ -165,10 +165,10 @@ el primer sondeo.
 - **Espera máxima.** Un cambio espera lo que falte del intervalo en curso más, como
   mucho, dos turnos: el de un pedido más antiguo de la otra válvula y el de un cierre
   de esa misma válvula que lo adelante por prioridad. La espera es siempre **menor que
-  tres intervalos** (24 s). Solo se acerca a ese límite si el tablero cambia las dos
+  tres intervalos** (45 s con el intervalo de 15 s). Solo se acerca a ese límite si el tablero cambia las dos
   válvulas de un equipo varias veces en pocos segundos; en la secuencia del cliente la
   espera es de un intervalo. *(Corregido en la implementación: el plan decía dos
-  intervalos, y una prueba de peor caso mostró una espera de 23 s.)*
+  intervalos, y una prueba de peor caso mostró una espera de casi tres.)*
 - **Desbordamiento del reloj** (~49,7 días). El intervalo dura lo mismo antes, durante y
   después.
 - **Rebote del interruptor.** El antirrebote existente actúa antes: la separación trabaja
@@ -232,8 +232,8 @@ el primer sondeo.
 **Configuración, interfaz y pruebas**
 
 - **FR-214**: El intervalo de separación DEBE declararse en el módulo de configuración
-  temporal con un valor de **8 s**, junto con la separación mínima medida del actuador
-  (5 s). La compilación DEBE fallar si el intervalo es menor que esa separación mínima.
+  temporal con un valor de **15 s**, junto con la separación mínima medida del actuador
+  (15 s; ver Assumptions). La compilación DEBE fallar si el intervalo es menor que esa separación mínima.
 - **FR-215**: El panel DEBE mostrar el valor **publicado** de cada válvula (`0` mientras
   un cambio espera) y `-` para las válvulas de equipos no instalados.
 - **FR-216**: La consola DEBE registrar, por válvula, cada cambio que queda pendiente,
@@ -268,8 +268,8 @@ el primer sondeo.
 - **Cambio pendiente**: por válvula, el estado que espera publicarse y el instante en que
   se pidió. Desaparece al publicarse o al cancelarse.
 - **Intervalo de separación**: parámetro de instalación en milisegundos, común a todos los
-  equipos (8 s).
-- **Separación mínima del actuador**: límite medido del UC511 (5 s) contra el que se
+  equipos (15 s).
+- **Separación mínima del actuador**: límite medido del UC511 (15 s) contra el que se
   valida el intervalo en compilación.
 
 ### Mapa de la instalación piloto
@@ -302,17 +302,19 @@ el primer sondeo.
 - **SC-205**: Pedir una válvula de un equipo no instalado deja su registro en `0` y genera
   exactamente un aviso por pedido.
 - **SC-206**: En la secuencia del cliente, la primera válvula de cada bloque riega los
-  7 min completos y la segunda 7 min menos el intervalo (6 min 52 s), con desviación menor
+  7 min completos y la segunda 7 min menos el intervalo (6 min 45 s), con desviación menor
   a 2 s medida en campo.
 - **SC-207**: El lazo de control sigue sin superar 2 ms por vuelta y el uso de SRAM sigue
   por debajo del 75 %.
 
 ## Assumptions
 
-- La separación mínima de 5 s del UC511 es una medida de campo del piloto, no un dato del
-  fabricante. El intervalo de 8 s deja 3 s de margen para la latencia del sondeo del UC100
+- La separación mínima del UC511 es una medida de campo del piloto, no un dato del
+  fabricante. Entre un cierre y una apertura bastan 5 s, pero tras una **apertura** un
+  cierre a 8 s se pierde y a 15 s llega (banco, 2026-10-14). El intervalo se fijó en 15 s,
+  el valor que funcionó; el límite real está entre 8 y 15 s. Cubre la latencia del sondeo del UC100
   (~1 s medida).
-- El cliente acepta que la segunda válvula de cada bloque riegue 8 s menos (6 min 52 s).
+- El cliente acepta que la segunda válvula de cada bloque riegue 15 s menos (6 min 45 s).
 - El cableado del piloto coincide con el mapa de la guía del piloto (V01/V02 en UC511 #01,
   y así sucesivamente); se verifica en la puesta en marcha.
 - La instalación completa seguirá el patrón de pares consecutivos; si no, se edita el mapa

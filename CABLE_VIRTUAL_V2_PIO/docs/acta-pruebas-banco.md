@@ -169,7 +169,7 @@ serie abierta. V01/V02 comparten el UC511 #01; V09 pertenece al #05, no instalad
 | # | Acción en el tablero | Esperado | Obtenido | ✔ / ✘ / NP |
 |---|---|---|---|---|
 | B-1 | Subir V01 | reg 0 = `1` en el siguiente sondeo; consola `TX 0 1` | | |
-| B-2 | Con V01 arriba > 8 s: bajar V01 y subir V02 a la vez | reg 0 = `0` al instante; `WAIT 1`; reg 1 = `1` ~8 s después | | |
+| B-2 | Con V01 arriba > 15 s: bajar V01 y subir V02 a la vez | reg 0 = `0` al instante; `WAIT 1`; reg 1 = `1` ~15 s después | | |
 | B-3 | Bajar V02 y subir V03 a la vez | reg 1 y reg 2 cambian en el mismo sondeo | | |
 | B-4 | Justo tras B-3, subir y bajar V04 en 3 s | reg 3 nunca vale `1`; consola `CANC 3` | | |
 | B-5 | Subir V09 | reg 8 sigue en `0`; LCD `-` en V09; `NOINST 8` una vez | | |
@@ -187,7 +187,7 @@ y así con los demás) ☐
 | C-3 | 10 pedidos revertidos dentro del intervalo | ninguna válvula se mueve | | |
 | C-4 | 10 cierres pedidos 3 s después de abrir | las 10 cierran | | |
 | C-5 | 10 reinicios con válvulas regando | ninguna cierra | | |
-| C-6 | Secuencia completa de un bloque (7 + 7 min) | primera 7:00, segunda 6:52 ± 2 s | | |
+| C-6 | Secuencia completa de un bloque (7 + 7 min) | primera 7:00, segunda 6:45 ± 2 s | | |
 
 ---
 

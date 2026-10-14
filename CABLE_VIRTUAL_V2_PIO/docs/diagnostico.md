@@ -57,12 +57,14 @@ corresponde a una válvula concreta.
 | `TX` | el nivel pedido por un interruptor cambió | nivel que el tablero pide (0 o 1) |
 | `DROP` | se descartó una trama, o el panel dejó de responder | motivo o dato de contexto |
 | `LCD` | el panel quedó marcado como no sano | fallos consecutivos |
-| `WAIT` | un cambio de válvula espera su turno porque su UC511 tuvo otro cambio hace menos de 8 s | número de UC511 |
+| `WAIT` | un cambio de válvula espera su turno porque su UC511 tuvo otro cambio hace menos de 15 s | número de UC511 |
 | `CANC` | un cambio que esperaba turno se descartó porque el tablero lo revirtió | número de UC511 |
 | `NOINST` | el tablero pidió riego en una válvula de un UC511 no instalado (el registro sigue en 0) | número de UC511 |
 
 `WAIT` es normal en el cambio de una válvula a la otra del mismo UC511: la que abre sale
-8 s después de que cierre su vecina. Un `TX` de esa válvula 8 s después cierra el ciclo.
+15 s después de que cierre su vecina. Un `TX` de esa válvula 15 s después cierra el ciclo.
+También es normal al apagar una válvula a los pocos segundos de prenderla: el cierre
+sale 15 s después de la apertura.
 
 En el panel, una válvula de un UC511 no instalado se muestra con **`-`** en vez de `0`/`1`.
 Si aparece `-` en una válvula que sí está instalada, falta marcar su equipo en `kActuators`

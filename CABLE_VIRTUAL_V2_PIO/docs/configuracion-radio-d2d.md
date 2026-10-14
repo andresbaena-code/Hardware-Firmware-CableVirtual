@@ -17,9 +17,9 @@ como red de seguridad. El `Duration` va por encima del pulso de riego (10 min
 para pulsos de 7 min), asi que en operacion normal nunca actua.
 
 **Separacion de comandos por UC511 (spec 003, FR-218).** Medido en el piloto: un
-UC511 pierde sin aviso el segundo de dos comandos que le lleguen con menos de 5 s
-entre ellos. A equipos distintos no les pasa. Por eso el firmware del Mega nunca
-publica dos cambios de valvulas del mismo UC511 con menos de **8 s**; lo que
+UC511 pierde sin aviso el segundo de dos comandos que le lleguen demasiado juntos:
+tras una apertura, un cierre a 8 s se pierde y a 15 s llega. A equipos distintos no les pasa. Por eso el firmware del Mega nunca
+publica dos cambios de valvulas del mismo UC511 con menos de **15 s**; lo que
 llega dentro del intervalo espera su turno y, si el tablero lo revierte antes,
 se descarta. Para eso el firmware necesita saber que valvulas comparten UC511:
 el reparto de la seccion 6 tiene que coincidir con
@@ -253,12 +253,12 @@ En cada UC511:
 |---|---|---|---|
 | `Lockout` | condicion de cada regla del UC100 | sin marcar | Cada cambio del registro dispara una orden. Si se reafirma con la condicion sostenida esta pendiente de medir (prueba B4 del piloto). |
 | `Delay Time` | accion de cada regla del UC100 | 0 | No se cancela si la condicion desaparece. |
-| Separacion por UC511 | firmware del Mega (`kCommandSpacingMs`) | 8 s | El UC511 pierde el segundo de dos comandos a menos de 5 s. |
+| Separacion por UC511 | firmware del Mega (`kCommandSpacingMs`) | 15 s | Tras una apertura, el UC511 pierde un cierre a 8 s; a 15 s llega. |
 | `Duration` | regla de apertura del UC511 | 600 s, 10 min | Red de seguridad por encima del pulso de 7 min. |
 | `Reporting Interval` | General de cada UC100 | 1 minuto | Es el minimo configurable. NO dejarlo en los 20 de fabrica. |
 
 Latencia medida en el piloto, tablero -> valvula: ~1 s. Con pulsos de 7 min en
-secuencia por bloques, la segunda valvula de cada UC511 riega 6 min 52 s.
+secuencia por bloques, la segunda valvula de cada UC511 riega 6 min 45 s.
 
 ## 8. Mapa completo
 

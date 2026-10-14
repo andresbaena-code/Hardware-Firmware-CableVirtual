@@ -18,9 +18,11 @@ piloto y se deja para cuando se escale.
 
 Lo que SI aporta el firmware desde la spec 003 (FR-218) es la **separacion de
 comandos por UC511**: un UC511 pierde sin aviso el segundo de dos comandos que
-le lleguen con menos de 5 s entre ellos, asi que el Mega nunca publica dos
-cambios de valvulas del mismo UC511 con menos de **8 s**. En el cambio de V01 a
-V02 del mismo bloque, V01 cierra al instante y V02 abre 8 s despues. Por eso el
+le lleguen demasiado juntos (medido: tras una apertura, un cierre a 8 s se
+pierde y a 15 s llega), asi que el Mega nunca publica dos cambios de valvulas
+del mismo UC511 con menos de **15 s**. En el cambio de V01 a V02 del mismo
+bloque, V01 cierra al instante y V02 abre 15 s despues. Un pulso de menos de
+15 s se alarga: el cierre sale 15 s despues de la apertura. Por eso el
 reparto de valvulas por UC511 de la seccion 6 tiene que coincidir con el mapa
 de `lib/wiga_config/installation_map.h` y con el cableado real.
 
@@ -151,12 +153,12 @@ En cada UC511:
 |---|---|---|---|
 | `Lockout` | condicion de cada regla del UC100 | sin marcar | Cada cambio del registro dispara una sola orden. Si se reafirma o no con la condicion sostenida esta pendiente de medir (prueba B4). |
 | `Delay Time` | accion de cada regla del UC100 | 0 | No se cancela si la condicion desaparece: no sirve para separar comandos. |
-| Separacion por UC511 | firmware del Mega (`kCommandSpacingMs`) | 8 s | El UC511 pierde el segundo de dos comandos a menos de 5 s. |
+| Separacion por UC511 | firmware del Mega (`kCommandSpacingMs`) | 15 s | Tras una apertura, el UC511 pierde un cierre a 8 s; a 15 s llega. |
 | `Duration` | regla de apertura del UC511 | 600 s, 10 min | Red de seguridad por encima del pulso de 7 min. |
 | `Reporting Interval` | General del UC100 | 1 minuto | Minimo configurable. NO dejarlo en los 20 de fabrica. |
 
 **Efecto en el riego:** con pulsos de 7 min en secuencia, la primera valvula de
-cada bloque riega 7 min y la segunda 6 min 52 s, porque abre 8 s despues de que
+cada bloque riega 7 min y la segunda 6 min 45 s, porque abre 15 s despues de que
 cierre su vecina del mismo UC511. Las valvulas de UC511 distintos no se esperan.
 
 Latencia medida tablero -> valvula: ~1 s (el UC100 sondea casi continuamente).
@@ -194,7 +196,7 @@ Latencia medida tablero -> valvula: ~1 s (el UC100 sondea casi continuamente).
 7. Probar valvula por valvula: energizar la entrada del tablero, cronometrar
    hasta que abre; desenergizar, cronometrar hasta que cierra.
 8. Probar el cambio dentro de un bloque (V01 -> V02) 10 veces: V01 cierra al
-   instante, V02 abre ~8 s despues, las dos responden siempre.
+   instante, V02 abre ~15 s despues, las dos responden siempre.
 9. Prueba de una hora con las 8 valvulas y caudal real antes de escalar.
 
 Cuando el piloto quede validado, escalar a las 24 valvulas es el documento

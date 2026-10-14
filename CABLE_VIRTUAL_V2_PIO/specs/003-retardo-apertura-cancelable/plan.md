@@ -9,7 +9,7 @@
 El UC511 pierde el segundo de dos comandos que le llegan con menos de 5 s de
 separación. El controlador pasa a conocer a qué UC511 pertenece cada válvula (mapa de
 instalación ampliado, con marca de equipo instalado) y a no publicar dos cambios del
-mismo equipo con menos de 8 s. Los cambios que llegan en el intervalo quedan pendientes,
+mismo equipo con menos de 15 s (medido en banco; el plan original decía 8 s). Los cambios que llegan en el intervalo quedan pendientes,
 se cancelan si el tablero los revierte, y se publican por turnos: primero cierres,
 luego el más antiguo. La lógica vive en una clase pura nueva, `CommandSpacer`, que
 `ValvePublisher` consulta antes de escribir el banco de registros. El mapa de registros
@@ -29,7 +29,7 @@ Modbus no cambia.
 
 **Project Type**: firmware embebido
 
-**Performance Goals**: separación ≥ 8 s entre cambios del mismo UC511; espera máxima < 24 s; cero espera entre equipos distintos
+**Performance Goals**: separación ≥ 15 s entre cambios del mismo UC511; espera máxima < 45 s; cero espera entre equipos distintos
 
 **Constraints**: lazo ≤ 2 ms por vuelta; SRAM < 75 % (hoy 21,1 %); sin `delay()`, sin memoria dinámica; capas puras sin `<Arduino.h>`
 
