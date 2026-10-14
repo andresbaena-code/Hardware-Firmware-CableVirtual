@@ -14,11 +14,8 @@ enum class LogLevel : uint8_t { Error = 1, Warn = 2, Info = 3, Debug = 4 };
 namespace logtag {
 constexpr char kBoot[]    = "BOOT";  ///< causa del ultimo reinicio
 constexpr char kVersion[] = "VER";   ///< version de firmware
-constexpr char kTx[]      = "TX";    ///< orden transmitida
-constexpr char kAck[]     = "ACK";   ///< confirmacion valida recibida
-constexpr char kTimeout[] = "TMO";   ///< vencio la espera sin confirmar
-constexpr char kBackoff[] = "BACK";  ///< entra en reposo prolongado
-constexpr char kDrop[]    = "DROP";  ///< trama descartada
+constexpr char kTx[]      = "TX";    ///< el nivel pedido por el tablero cambio
+constexpr char kDrop[]    = "DROP";  ///< trama descartada / salud del panel
 constexpr char kLcd[]     = "LCD";   ///< panel marcado como no sano
 }  // namespace logtag
 

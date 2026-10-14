@@ -65,47 +65,6 @@ uint32_t g_lastDiagMs  = 0;
 uint8_t  g_resetCause   = 0;
 bool     g_panelHealthy = true;
 
-#if defined(WIGA_RS485_HELLO)
-#warning "WIGA_RS485_HELLO activo: saludo de banco en el bus. NO USAR EN PRODUCCION."
-
-uint32_t g_lastHelloMs = 0;
-
-/// Saludo PERIODICO por el RS485. SOLO PARA BANCO.
-///
-/// EXCEPCION DELIBERADA Y ACOTADA a la regla MB-07 del contrato ("el esclavo
-/// nunca inicia una transmision que no sea respuesta a una peticion valida").
-/// Se permite porque:
-///
-///   * va compilada fuera salvo en el entorno megaatmega2560_banco;
-///   * no es una trama Modbus, es texto legible, para distinguir a simple vista
-///     un bus sano de uno con A y B cruzados;
-///   * cede siempre el paso: si hay algo transmitiendose, no interrumpe.
-///
-/// Se repite en vez de emitirse una sola vez al arrancar, porque en banco hace
-/// falta mover cables, cambiar la velocidad del terminal o recolocar el conector
-/// y ver la reaccion sin tener que resetear la placa cada vez.
-///
-/// Con el UC100 conectado NO debe usarse: colisionaria con el maestro.
-void serviceBenchBanner(uint32_t nowMs) {
-    static const char kBanner[] = "\r\nWIGA 2.0 RS485 OK esclavo=1 9600-8N1\r\n";
-    const uint8_t length = sizeof(kBanner) - 1;
-
-    if (!wiga::elapsed(nowMs, g_lastHelloMs, wiga::config::kBenchHelloIntervalMs)) {
-        return;
-    }
-    // No pisar una transmision en curso, sea el saludo anterior o una respuesta.
-    if (g_bus.transmitting()) {
-        return;
-    }
-
-    g_lastHelloMs = nowMs;
-    g_bus.beginTransmission(length);
-    g_bus.write(reinterpret_cast<const uint8_t*>(kBanner), length);
-    // NO se espera aqui: serviceBus() lo drena en las vueltas siguientes, igual
-    // que hace con cualquier respuesta. El lazo no se bloquea.
-}
-#endif
-
 /// Atiende el bus. No bloquea: consume los bytes disponibles, y si hay una
 /// respuesta lista la entrega al hardware sin esperar a que salga del cable.
 void serviceBus(uint32_t nowMs) {
@@ -158,8 +117,7 @@ void serviceDiagnostics(uint32_t nowMs) {
     if (panelHealthy != g_panelHealthy) {
         g_panelHealthy = panelHealthy;
         g_log.event(panelHealthy ? wiga::LogLevel::Info : wiga::LogLevel::Error,
-                    wiga::logtag::kDrop, wiga::kNoValve,
-                    panelHealthy ? 1 : 0);
+                    wiga::logtag::kDrop, wiga::kNoValve, panelHealthy ? 1 : 0);
         g_log.message(panelHealthy ? wiga::LogLevel::Info : wiga::LogLevel::Error,
                       panelHealthy ? "PANEL LCD OK" : "PANEL LCD SIN RESPUESTA");
     }
@@ -193,6 +151,13 @@ void setup() {
     // una valvula que si esta regando y el UC100 la cerraria.
     g_publisher.begin();
 
+    // Flush de bytes residuales del UC100 que llegaron durante el boot.
+    // Sin esto, el primer ciclo de serviceBus() parsea un frame truncado
+    // y registra un format error innecesario.
+    while (g_bus.available() > 0) {
+        g_bus.read();
+    }
+
     // WD-02
     g_watchdog.enable();
     g_lastTickMs = millis();
@@ -216,12 +181,6 @@ void loop() {
     }
 
     serviceDiagnostics(now);
-
-#if defined(WIGA_RS485_HELLO)
-    // Solo en el entorno de banco. Va DESPUES de serviceBus() para que una
-    // respuesta pendiente tenga siempre prioridad sobre el saludo.
-    serviceBenchBanner(now);
-#endif
 
     // DP-02: como maximo una celda del panel por vuelta.
     g_display.tick();

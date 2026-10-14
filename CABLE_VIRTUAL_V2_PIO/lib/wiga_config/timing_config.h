@@ -127,10 +127,6 @@ constexpr uint32_t kLcdRecoveryIntervalMs = 1000UL;
 /// responde NACK, no expiracion, asi que hay que preguntarle activamente.
 constexpr uint32_t kLcdProbeIntervalMs = 1000UL;
 
-/// Cadencia del saludo de banco por RS485 (entorno megaatmega2560_banco).
-/// Solo se usa en ese entorno; en produccion la constante no genera codigo.
-constexpr uint32_t kBenchHelloIntervalMs = 2000UL;
-
 // --- Puertos serie -----------------------------------------------------------
 constexpr uint32_t kRadioBaudRate   = 9600;
 constexpr uint32_t kConsoleBaudRate = 9600;

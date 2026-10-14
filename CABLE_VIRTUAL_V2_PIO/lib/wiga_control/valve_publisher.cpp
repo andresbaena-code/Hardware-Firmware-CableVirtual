@@ -35,6 +35,13 @@ void ValvePublisher::begin() {
         registers_.set(config::valveRegister(i), registerValueOf(state));
     }
     refreshDisplay();
+
+    // Forzar el primer refresco de la linea de estado: al arrancar,
+    // busHealthy_ y shownBusHealthy_ son iguales (ambos true), asi que
+    // refreshDisplay() no escribe nada. Invertir shownBusHealthy_ obliga
+    // a que la primera llamada ponga el texto en el LCD.
+    shownBusHealthy_ = !busHealthy_;
+    refreshDisplay();
 }
 
 void ValvePublisher::tick() {
