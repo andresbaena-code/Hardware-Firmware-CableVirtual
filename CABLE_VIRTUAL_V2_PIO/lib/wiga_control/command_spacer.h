@@ -1,6 +1,7 @@
 // -----------------------------------------------------------------------------
 //  Separador de comandos por UC511.
-//  Cubre: FR-204, FR-205, FR-206, FR-207, FR-208, FR-209, FR-210, FR-211
+//  Cubre: FR-204, FR-205, FR-206, FR-207, FR-208, FR-209, FR-210, FR-211,
+//         FR-217 (codigo puro, verificado en test/test_control/test_command_spacer.cpp)
 //  (specs/003-retardo-apertura-cancelable, contracts/command-spacer.md)
 //
 //  Un UC511 pierde sin aviso el segundo de dos comandos que le llegan con menos

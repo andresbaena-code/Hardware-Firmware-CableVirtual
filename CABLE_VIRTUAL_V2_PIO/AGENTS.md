@@ -40,7 +40,8 @@ confirmación del campo (el protocolo D2D no acusa recibo).
 - `lib/wiga_domain/` — tipos puros (`SignalLevel`, `ValveState`). Sin hardware.
 - `lib/wiga_modbus/` — capa **pura**: esclavo Modbus, CRC16, banco de registros. Sin
   `<Arduino.h>`.
-- `lib/wiga_control/` — debouncer, `ValvePublisher`. Sin hardware.
+- `lib/wiga_control/` — debouncer, `ValvePublisher`, `CommandSpacer` (turnos por UC511,
+  spec 003). Sin hardware.
 - `lib/wiga_ports/` — interfaces abstractas: `IClock`, `IByteStream`, `IDisplayPort`,
   `IWatchdogPort`, `ILogPort`, `IDigitalInputPort`. Solo cabeceras.
 - `lib/wiga_hal/` — adaptadores concretos: `Rs485StreamAdapter`, LCD, reloj, watchdog,

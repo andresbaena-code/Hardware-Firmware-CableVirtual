@@ -178,15 +178,15 @@ panel `-`.
 
 ## Phase 8: Polish & Cross-Cutting
 
-- [ ] T038 Compilar `$PIO run -e megaatmega2560` y `$PIO run -e megaatmega2560_silent` sin errores ni advertencias nuevas; anotar RAM y Flash (RAM < 75 %, esperado ≈ 24 %)
-- [ ] T039 Comprobación manual de MAP-V15 (quickstart nivel 1): duplicar `actuator`/`output` de V01 en V03, compilar, confirmar el error `MAP-V15`, deshacer
-- [ ] T040 Ejecutar `python ../.github/scripts/check_traceability.py ..` (o el intérprete disponible) y confirmar que FR-201..FR-218 aparecen citados
-- [ ] T041 [P] Actualizar `docs/piloto-8-valvulas-d2d.md` y su generador `scripts/gen_piloto_d2d.py` al diseño acordado: una acción por regla del UC100, sin *Delay Time*, `Lock time` según lo medido, `Duration` del UC511 como red de seguridad, efecto de la separación en el pulso (6 min 52 s en la segunda válvula del bloque), mapa válvula → UC511 — cubre FR-218
-- [ ] T042 [P] Actualizar `docs/configuracion-radio-d2d.md` y `scripts/gen_configuracion_d2d.py` con los mismos tiempos — cubre FR-218
-- [ ] T043 [P] Actualizar `docs/configuracion-finca.md`: cómo declarar `actuator`, `output` y `installed` para una finca nueva y qué significan los errores `MAP-V13..V17`
-- [ ] T044 [P] Actualizar `docs/ARQUITECTURA_DEL_FIRMWARE.md` y la sección de estructura de `AGENTS.md` con `CommandSpacer`
-- [ ] T045 [P] Añadir a `docs/diagnostico.md` las trazas `WAIT`, `CANC`, `NOINST` y el símbolo `-` del panel
-- [ ] T046 [P] Añadir a `docs/acta-pruebas-banco.md` un bloque "Spec 003" con las tablas de banco B-1..B-6 y campo C-1..C-6 de [quickstart.md](quickstart.md)
+- [X] T038 Compilar `$PIO run -e megaatmega2560` y `$PIO run -e megaatmega2560_silent` sin errores ni advertencias nuevas; anotar RAM y Flash (RAM < 75 %, esperado ≈ 24 %)
+- [X] T039 Comprobación manual de MAP-V15 (quickstart nivel 1): duplicar `actuator`/`output` de V01 en V03, compilar, confirmar el error `MAP-V15`, deshacer
+- [X] T040 Ejecutar `python ../.github/scripts/check_traceability.py ..` (o el intérprete disponible) y confirmar que FR-201..FR-218 aparecen citados
+- [X] T041 [P] Actualizar `docs/piloto-8-valvulas-d2d.md` y su generador `scripts/gen_piloto_d2d.py` al diseño acordado: una acción por regla del UC100, sin *Delay Time*, `Lock time` según lo medido, `Duration` del UC511 como red de seguridad, efecto de la separación en el pulso (6 min 52 s en la segunda válvula del bloque), mapa válvula → UC511 — cubre FR-218
+- [X] T042 [P] Actualizar `docs/configuracion-radio-d2d.md` y `scripts/gen_configuracion_d2d.py` con los mismos tiempos — cubre FR-218
+- [X] T043 [P] Actualizar `docs/configuracion-finca.md`: cómo declarar `actuator`, `output` y `installed` para una finca nueva y qué significan los errores `MAP-V13..V17`
+- [X] T044 [P] Actualizar `docs/ARQUITECTURA_DEL_FIRMWARE.md` y la sección de estructura de `AGENTS.md` con `CommandSpacer`
+- [X] T045 [P] Añadir a `docs/diagnostico.md` las trazas `WAIT`, `CANC`, `NOINST` y el símbolo `-` del panel
+- [X] T046 [P] Añadir a `docs/acta-pruebas-banco.md` un bloque "Spec 003" con las tablas de banco B-1..B-6 y campo C-1..C-6 de [quickstart.md](quickstart.md)
 - [ ] T047 Pruebas de banco B-1..B-6 de [quickstart.md](quickstart.md) en la placa real (con el responsable técnico) y registro en el acta
 - [ ] T048 Pruebas de campo C-1..C-6 de [quickstart.md](quickstart.md) en el piloto, verificando antes que el cableado coincide con el mapa, y registro en el acta
 

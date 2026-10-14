@@ -9,25 +9,25 @@ Arquitectura elegida: **Milesight D2D sin gateway**. Las 24 valvulas estan
 repartidas por la finca, de modo que no hay un punto comun donde concentrar los
 accionamientos y cada pareja de valvulas necesita su propio nodo de radio.
 
-## 0. LO PRIMERO: un comportamiento sin documentar del que depende la seguridad
+## 0. Como cierra una valvula, y que pone el firmware
 
-Toda la red de seguridad de este diseno descansa en el temporizador `Duration`
-del UC511. **Ningun manual de Milesight dice si una nueva orden de apertura
-REARMA ese temporizador mientras esta contando.** Hay que medirlo con un UC511
-en la mesa antes de instalar nada:
+Una valvula cierra por **cualquiera de las dos**: la orden de cierre que manda el
+UC100 cuando el tablero baja la entrada, o el temporizador `Duration` del UC511
+como red de seguridad. El `Duration` va por encima del pulso de riego (10 min
+para pulsos de 7 min), asi que en operacion normal nunca actua.
 
-1. Graba una regla de apertura con `Time Control` habilitado y `Duration` = 60 s.
-2. Envia la orden de apertura. Cuenta 30 segundos.
-3. Envia la MISMA orden otra vez.
-4. Cronometra cuando cierra la valvula.
+**Separacion de comandos por UC511 (spec 003, FR-218).** Medido en el piloto: un
+UC511 pierde sin aviso el segundo de dos comandos que le lleguen con menos de 5 s
+entre ellos. A equipos distintos no les pasa. Por eso el firmware del Mega nunca
+publica dos cambios de valvulas del mismo UC511 con menos de **8 s**; lo que
+llega dentro del intervalo espera su turno y, si el tablero lo revierte antes,
+se descarta. Para eso el firmware necesita saber que valvulas comparten UC511:
+el reparto de la seccion 6 tiene que coincidir con
+`lib/wiga_config/installation_map.h` y con el cableado real.
 
-- Cierra a los **90 s** desde el primer envio: el temporizador SE REARMA y el
-  diseno de abajo es valido tal cual.
-- Cierra a los **60 s**: NO se rearma. Entonces la reafirmacion periodica no
-  sostiene la valvula abierta, cerraria cada `Duration` y volveria a abrir en la
-  siguiente reafirmacion, con aleteo mecanico. Habria que subir `Duration` por
-  encima del riego mas largo previsto y aceptar que el unico cierre rapido es la
-  regla explicita de cierre.
+Cada UC511 lleva ademas una marca de instalado en ese mismo archivo. Las valvulas
+de un UC511 no instalado publican siempre 0 y el LCD las muestra con `-`: al
+crecer desde el piloto hay que marcar como instalados los equipos nuevos.
 
 ## 1. Requisitos previos, sin los cuales nada de esto funciona
 
@@ -146,79 +146,78 @@ Max Retry Times `3`.
 
 ## 5. Reglas IF-THEN
 
-Cada valvula gasta dos reglas, una por `is True` y otra por `is False`. Si
-configuras el canal como `Coil` o `Discrete` en vez de `Holding Register`, la
-condicion es directamente True/False en vez de un umbral en coma flotante, que
-es mas limpio; el firmware lo admite porque responde a FC01 y FC02 ademas de
-FC03 y FC04.
+Cada valvula gasta dos reglas: `Above 0.5` abre y `Below 0.5` cierra. El umbral
+es 0,5 porque el registro solo vale 0 o 1, y asi no depende de como compare el
+UC100 la igualdad en coma flotante.
 
-**Las tres acciones de cada regla envian el MISMO codigo con retardos 0, 2000 y
-4000 ms.** No es un error de copia: D2D no tiene acuse de recibo, asi que cada
-orden se emite tres veces escalonada para que un paquete perdido no deje la
-valvula desincronizada. Las tres ranuras de accion existen justo para esto.
+**Una sola accion por regla, sin `Delay Time`.** ToolBox no deja repetir la
+misma accion en una regla ("Action can not be repeated"), asi que la rafaga de
+tres envios no es configurable. Y el `Delay Time` no sirve para separar
+comandos: medido en el piloto, si la condicion desaparece durante la espera la
+accion se ejecuta igual. La separacion la hace el firmware (seccion 0).
 
 ### UC100 del Bus 1
 
-| Regla | IF: condicion | THEN: 3 acciones con el MISMO codigo | Lock time |
-|---|---|---|---|
-| 1 | Channel 1 **is True** | D2D `0101` = abrir V01, retardos 0 / 2000 / 4000 ms | 300000 |
-| 2 | Channel 1 **is False** | D2D `0100` = cerrar V01, retardos 0 / 2000 / 4000 ms | 300000 |
-| 3 | Channel 2 **is True** | D2D `0201` = abrir V02, retardos 0 / 2000 / 4000 ms | 300000 |
-| 4 | Channel 2 **is False** | D2D `0200` = cerrar V02, retardos 0 / 2000 / 4000 ms | 300000 |
-| 5 | Channel 3 **is True** | D2D `0301` = abrir V03, retardos 0 / 2000 / 4000 ms | 300000 |
-| 6 | Channel 3 **is False** | D2D `0300` = cerrar V03, retardos 0 / 2000 / 4000 ms | 300000 |
-| 7 | Channel 4 **is True** | D2D `0401` = abrir V04, retardos 0 / 2000 / 4000 ms | 300000 |
-| 8 | Channel 4 **is False** | D2D `0400` = cerrar V04, retardos 0 / 2000 / 4000 ms | 300000 |
-| 9 | Channel 5 **is True** | D2D `0501` = abrir V05, retardos 0 / 2000 / 4000 ms | 300000 |
-| 10 | Channel 5 **is False** | D2D `0500` = cerrar V05, retardos 0 / 2000 / 4000 ms | 300000 |
-| 11 | Channel 6 **is True** | D2D `0601` = abrir V06, retardos 0 / 2000 / 4000 ms | 300000 |
-| 12 | Channel 6 **is False** | D2D `0600` = cerrar V06, retardos 0 / 2000 / 4000 ms | 300000 |
-| 13 | Channel 7 **is True** | D2D `0701` = abrir V07, retardos 0 / 2000 / 4000 ms | 300000 |
-| 14 | Channel 7 **is False** | D2D `0700` = cerrar V07, retardos 0 / 2000 / 4000 ms | 300000 |
-| 15 | Channel 8 **is True** | D2D `0801` = abrir V08, retardos 0 / 2000 / 4000 ms | 300000 |
-| 16 | Channel 8 **is False** | D2D `0800` = cerrar V08, retardos 0 / 2000 / 4000 ms | 300000 |
+| Regla | IF: condicion | THEN: una sola accion | Delay Time | Lockout |
+|---|---|---|---|---|
+| 1 | Channel 1 **Above 0.5** | D2D `0101` = abrir V01 | 0 | sin marcar |
+| 2 | Channel 1 **Below 0.5** | D2D `0100` = cerrar V01 | 0 | sin marcar |
+| 3 | Channel 2 **Above 0.5** | D2D `0201` = abrir V02 | 0 | sin marcar |
+| 4 | Channel 2 **Below 0.5** | D2D `0200` = cerrar V02 | 0 | sin marcar |
+| 5 | Channel 3 **Above 0.5** | D2D `0301` = abrir V03 | 0 | sin marcar |
+| 6 | Channel 3 **Below 0.5** | D2D `0300` = cerrar V03 | 0 | sin marcar |
+| 7 | Channel 4 **Above 0.5** | D2D `0401` = abrir V04 | 0 | sin marcar |
+| 8 | Channel 4 **Below 0.5** | D2D `0400` = cerrar V04 | 0 | sin marcar |
+| 9 | Channel 5 **Above 0.5** | D2D `0501` = abrir V05 | 0 | sin marcar |
+| 10 | Channel 5 **Below 0.5** | D2D `0500` = cerrar V05 | 0 | sin marcar |
+| 11 | Channel 6 **Above 0.5** | D2D `0601` = abrir V06 | 0 | sin marcar |
+| 12 | Channel 6 **Below 0.5** | D2D `0600` = cerrar V06 | 0 | sin marcar |
+| 13 | Channel 7 **Above 0.5** | D2D `0701` = abrir V07 | 0 | sin marcar |
+| 14 | Channel 7 **Below 0.5** | D2D `0700` = cerrar V07 | 0 | sin marcar |
+| 15 | Channel 8 **Above 0.5** | D2D `0801` = abrir V08 | 0 | sin marcar |
+| 16 | Channel 8 **Below 0.5** | D2D `0800` = cerrar V08 | 0 | sin marcar |
 
 ### UC100 del Bus 2
 
-| Regla | IF: condicion | THEN: 3 acciones con el MISMO codigo | Lock time |
-|---|---|---|---|
-| 1 | Channel 1 **is True** | D2D `0901` = abrir V09, retardos 0 / 2000 / 4000 ms | 300000 |
-| 2 | Channel 1 **is False** | D2D `0900` = cerrar V09, retardos 0 / 2000 / 4000 ms | 300000 |
-| 3 | Channel 2 **is True** | D2D `0A01` = abrir V10, retardos 0 / 2000 / 4000 ms | 300000 |
-| 4 | Channel 2 **is False** | D2D `0A00` = cerrar V10, retardos 0 / 2000 / 4000 ms | 300000 |
-| 5 | Channel 3 **is True** | D2D `0B01` = abrir V11, retardos 0 / 2000 / 4000 ms | 300000 |
-| 6 | Channel 3 **is False** | D2D `0B00` = cerrar V11, retardos 0 / 2000 / 4000 ms | 300000 |
-| 7 | Channel 4 **is True** | D2D `0C01` = abrir V12, retardos 0 / 2000 / 4000 ms | 300000 |
-| 8 | Channel 4 **is False** | D2D `0C00` = cerrar V12, retardos 0 / 2000 / 4000 ms | 300000 |
-| 9 | Channel 5 **is True** | D2D `0D01` = abrir V13, retardos 0 / 2000 / 4000 ms | 300000 |
-| 10 | Channel 5 **is False** | D2D `0D00` = cerrar V13, retardos 0 / 2000 / 4000 ms | 300000 |
-| 11 | Channel 6 **is True** | D2D `0E01` = abrir V14, retardos 0 / 2000 / 4000 ms | 300000 |
-| 12 | Channel 6 **is False** | D2D `0E00` = cerrar V14, retardos 0 / 2000 / 4000 ms | 300000 |
-| 13 | Channel 7 **is True** | D2D `0F01` = abrir V15, retardos 0 / 2000 / 4000 ms | 300000 |
-| 14 | Channel 7 **is False** | D2D `0F00` = cerrar V15, retardos 0 / 2000 / 4000 ms | 300000 |
-| 15 | Channel 8 **is True** | D2D `1001` = abrir V16, retardos 0 / 2000 / 4000 ms | 300000 |
-| 16 | Channel 8 **is False** | D2D `1000` = cerrar V16, retardos 0 / 2000 / 4000 ms | 300000 |
+| Regla | IF: condicion | THEN: una sola accion | Delay Time | Lockout |
+|---|---|---|---|---|
+| 1 | Channel 1 **Above 0.5** | D2D `0901` = abrir V09 | 0 | sin marcar |
+| 2 | Channel 1 **Below 0.5** | D2D `0900` = cerrar V09 | 0 | sin marcar |
+| 3 | Channel 2 **Above 0.5** | D2D `0A01` = abrir V10 | 0 | sin marcar |
+| 4 | Channel 2 **Below 0.5** | D2D `0A00` = cerrar V10 | 0 | sin marcar |
+| 5 | Channel 3 **Above 0.5** | D2D `0B01` = abrir V11 | 0 | sin marcar |
+| 6 | Channel 3 **Below 0.5** | D2D `0B00` = cerrar V11 | 0 | sin marcar |
+| 7 | Channel 4 **Above 0.5** | D2D `0C01` = abrir V12 | 0 | sin marcar |
+| 8 | Channel 4 **Below 0.5** | D2D `0C00` = cerrar V12 | 0 | sin marcar |
+| 9 | Channel 5 **Above 0.5** | D2D `0D01` = abrir V13 | 0 | sin marcar |
+| 10 | Channel 5 **Below 0.5** | D2D `0D00` = cerrar V13 | 0 | sin marcar |
+| 11 | Channel 6 **Above 0.5** | D2D `0E01` = abrir V14 | 0 | sin marcar |
+| 12 | Channel 6 **Below 0.5** | D2D `0E00` = cerrar V14 | 0 | sin marcar |
+| 13 | Channel 7 **Above 0.5** | D2D `0F01` = abrir V15 | 0 | sin marcar |
+| 14 | Channel 7 **Below 0.5** | D2D `0F00` = cerrar V15 | 0 | sin marcar |
+| 15 | Channel 8 **Above 0.5** | D2D `1001` = abrir V16 | 0 | sin marcar |
+| 16 | Channel 8 **Below 0.5** | D2D `1000` = cerrar V16 | 0 | sin marcar |
 
 ### UC100 del Bus 3
 
-| Regla | IF: condicion | THEN: 3 acciones con el MISMO codigo | Lock time |
-|---|---|---|---|
-| 1 | Channel 1 **is True** | D2D `1101` = abrir V17, retardos 0 / 2000 / 4000 ms | 300000 |
-| 2 | Channel 1 **is False** | D2D `1100` = cerrar V17, retardos 0 / 2000 / 4000 ms | 300000 |
-| 3 | Channel 2 **is True** | D2D `1201` = abrir V18, retardos 0 / 2000 / 4000 ms | 300000 |
-| 4 | Channel 2 **is False** | D2D `1200` = cerrar V18, retardos 0 / 2000 / 4000 ms | 300000 |
-| 5 | Channel 3 **is True** | D2D `1301` = abrir V19, retardos 0 / 2000 / 4000 ms | 300000 |
-| 6 | Channel 3 **is False** | D2D `1300` = cerrar V19, retardos 0 / 2000 / 4000 ms | 300000 |
-| 7 | Channel 4 **is True** | D2D `1401` = abrir V20, retardos 0 / 2000 / 4000 ms | 300000 |
-| 8 | Channel 4 **is False** | D2D `1400` = cerrar V20, retardos 0 / 2000 / 4000 ms | 300000 |
-| 9 | Channel 5 **is True** | D2D `1501` = abrir V21, retardos 0 / 2000 / 4000 ms | 300000 |
-| 10 | Channel 5 **is False** | D2D `1500` = cerrar V21, retardos 0 / 2000 / 4000 ms | 300000 |
-| 11 | Channel 6 **is True** | D2D `1601` = abrir V22, retardos 0 / 2000 / 4000 ms | 300000 |
-| 12 | Channel 6 **is False** | D2D `1600` = cerrar V22, retardos 0 / 2000 / 4000 ms | 300000 |
-| 13 | Channel 7 **is True** | D2D `1701` = abrir V23, retardos 0 / 2000 / 4000 ms | 300000 |
-| 14 | Channel 7 **is False** | D2D `1700` = cerrar V23, retardos 0 / 2000 / 4000 ms | 300000 |
-| 15 | Channel 8 **is True** | D2D `1801` = abrir V24, retardos 0 / 2000 / 4000 ms | 300000 |
-| 16 | Channel 8 **is False** | D2D `1800` = cerrar V24, retardos 0 / 2000 / 4000 ms | 300000 |
+| Regla | IF: condicion | THEN: una sola accion | Delay Time | Lockout |
+|---|---|---|---|---|
+| 1 | Channel 1 **Above 0.5** | D2D `1101` = abrir V17 | 0 | sin marcar |
+| 2 | Channel 1 **Below 0.5** | D2D `1100` = cerrar V17 | 0 | sin marcar |
+| 3 | Channel 2 **Above 0.5** | D2D `1201` = abrir V18 | 0 | sin marcar |
+| 4 | Channel 2 **Below 0.5** | D2D `1200` = cerrar V18 | 0 | sin marcar |
+| 5 | Channel 3 **Above 0.5** | D2D `1301` = abrir V19 | 0 | sin marcar |
+| 6 | Channel 3 **Below 0.5** | D2D `1300` = cerrar V19 | 0 | sin marcar |
+| 7 | Channel 4 **Above 0.5** | D2D `1401` = abrir V20 | 0 | sin marcar |
+| 8 | Channel 4 **Below 0.5** | D2D `1400` = cerrar V20 | 0 | sin marcar |
+| 9 | Channel 5 **Above 0.5** | D2D `1501` = abrir V21 | 0 | sin marcar |
+| 10 | Channel 5 **Below 0.5** | D2D `1500` = cerrar V21 | 0 | sin marcar |
+| 11 | Channel 6 **Above 0.5** | D2D `1601` = abrir V22 | 0 | sin marcar |
+| 12 | Channel 6 **Below 0.5** | D2D `1600` = cerrar V22 | 0 | sin marcar |
+| 13 | Channel 7 **Above 0.5** | D2D `1701` = abrir V23 | 0 | sin marcar |
+| 14 | Channel 7 **Below 0.5** | D2D `1700` = cerrar V23 | 0 | sin marcar |
+| 15 | Channel 8 **Above 0.5** | D2D `1801` = abrir V24 | 0 | sin marcar |
+| 16 | Channel 8 **Below 0.5** | D2D `1800` = cerrar V24 | 0 | sin marcar |
 
 ## 6. Reparto de valvulas por UC511
 
@@ -240,23 +239,26 @@ holgura para horarios o corte por volumen de agua.
 | #11 | V21 y V22 | V21 | V22 | `1501` abre / `1500` cierra V21 &nbsp;&nbsp; `1601` abre / `1600` cierra V22 |
 | #12 | V23 y V24 | V23 | V24 | `1701` abre / `1700` cierra V23 &nbsp;&nbsp; `1801` abre / `1800` cierra V24 |
 
-En cada UC511 la regla de apertura lleva `Time Control` habilitado y `Duration`
-= 900 s. La de cierre no necesita temporizador.
+En cada UC511:
+
+- Regla de apertura: `Time Control` habilitado, `Duration` = 600 s (10 min).
+- Regla de cierre: sin temporizador.
+- `When Power is Restored` = `Device ON, Valve Off`.
+- `Auto-Confirmed Mechanism` desactivado.
+- Clase **C**.
 
 ## 7. Tiempos, y por que estos valores
 
 | Parametro | Donde | Valor | Motivo |
 |---|---|---|---|
-| `Lock time` | condicion de cada regla del UC100 | 300000 ms, 5 min | Con 0 la condicion se detecta UNA sola vez y nunca se reafirma. Es el unico mecanismo de reafirmacion del sistema. |
-| Retardos de las 3 acciones | cada regla del UC100 | 0 / 2000 / 4000 ms | Rafaga de tres envios sin acuse de recibo, escalonada para no colisionar en el aire. |
-| `Duration` | regla de apertura del UC511 | 900 s, 15 min | Red de seguridad final: si el enlace muere con la valvula abierta, cierra sola. Tolera dos reafirmaciones perdidas seguidas y acota la inundacion a 15 minutos. |
+| `Lockout` | condicion de cada regla del UC100 | sin marcar | Cada cambio del registro dispara una orden. Si se reafirma con la condicion sostenida esta pendiente de medir (prueba B4 del piloto). |
+| `Delay Time` | accion de cada regla del UC100 | 0 | No se cancela si la condicion desaparece. |
+| Separacion por UC511 | firmware del Mega (`kCommandSpacingMs`) | 8 s | El UC511 pierde el segundo de dos comandos a menos de 5 s. |
+| `Duration` | regla de apertura del UC511 | 600 s, 10 min | Red de seguridad por encima del pulso de 7 min. |
 | `Reporting Interval` | General de cada UC100 | 1 minuto | Es el minimo configurable. NO dejarlo en los 20 de fabrica. |
 
-**El `Lock time` no puede ser mas rapido que la cadencia de sondeo del UC100**,
-porque una regla solo se reevalua cuando llegan datos nuevos del canal. Esa
-cadencia esta pendiente de medir: conecta el UC100 y mira la linea de estado del
-LCD. Si se queda fija en `PEDIDO x TABLERO`, el sondeo es mas rapido que 30 s;
-si alterna con `PEDIDO - SIN BUS`, es mas lento y hay que subir estos tiempos.
+Latencia medida en el piloto, tablero -> valvula: ~1 s. Con pulsos de 7 min en
+secuencia por bloques, la segunda valvula de cada UC511 riega 6 min 52 s.
 
 ## 8. Mapa completo
 
@@ -302,11 +304,12 @@ necesitaria un gateway.
 
 ## 10. Orden de puesta en marcha
 
-1. Medir si el temporizador `Duration` del UC511 se rearma (seccion 0).
-2. Medir la cadencia de sondeo del UC100 con la linea de estado del LCD.
-3. Confirmar el direccionamiento base 0 con el canal 9, `Address` 24.
-4. Cambiar los quince equipos a AU915 y a la clave D2D propia.
-5. Modificar el firmware para los tres buses RS485.
+1. Validar el piloto de 8 valvulas ([piloto-8-valvulas-d2d.md](piloto-8-valvulas-d2d.md)).
+2. Confirmar el direccionamiento base 0 con el canal 9, `Address` 24.
+3. Cambiar los quince equipos a AU915 y a la clave D2D propia.
+4. Modificar el firmware para los tres buses RS485, y marcar como instalados
+   los UC511 #05 a #12 en `lib/wiga_config/installation_map.h`.
+5. Verificar que el cableado de cada par coincide con la seccion 6.
 6. Configurar el UC100 del Bus 1 completo y probar las ocho primeras valvulas.
 7. Replicar en los buses 2 y 3 con `Export` / `Import` de la configuracion JSON.
 8. Prueba de una hora con caudal real antes de dejarlo desatendido.

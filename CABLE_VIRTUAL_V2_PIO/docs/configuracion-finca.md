@@ -32,6 +32,8 @@ constexpr ValveMapping kMap[] = {
 | Campo | Qué es | Estado |
 |---|---|---|
 | `inputPin` | Pin del Mega conectado a la salida del tablero | **vigente** |
+| `actuator` | Número del UC511 que acciona la válvula (1..12) | **vigente** (spec 003) |
+| `output` | Salida de ese UC511 (1 o 2) | **vigente** (spec 003) |
 | `nodeAddressLsb` | Dirección XBee de la instalación original | **histórico** |
 | `valveId` | Posición dentro del nodo XBee original | **histórico** |
 
@@ -77,11 +79,40 @@ en las pruebas de escritorio, donde los nombres `A0..A15` no existen.
 
 ---
 
+### Equipos UC511 y separación de comandos (spec 003)
+
+Un UC511 acciona dos válvulas y pierde sin aviso el segundo de dos comandos que le lleguen
+con menos de 5 s entre ellos. El firmware lo evita: nunca publica dos cambios de válvulas
+del **mismo** UC511 con menos de 8 s (`kCommandSpacingMs` en `timing_config.h`). Para eso
+necesita saber qué válvulas comparten equipo, y lo saca de `actuator` y `output`.
+
+Los equipos se declaran aparte, en `kActuators`, con una marca de instalado. Su posición
+en el arreglo más uno es el número de equipo:
+
+```cpp
+constexpr ActuatorConfig kActuators[] = {
+    /* #01 */ { true  },
+    /* #02 */ { true  },
+    ...
+    /* #05 */ { false },   // previsto, aún no instalado
+    ...
+};
+```
+
+Una válvula de un UC511 **no instalado** publica siempre `0`, pida lo que pida el
+tablero; el LCD la muestra con `-` y la consola avisa `NOINST`. Así, si al crecer alguien
+olvida marcar un equipo nuevo, la válvula no abre y se nota en la puesta en marcha, en vez
+de funcionar sin separación de comandos.
+
+**El mapa tiene que coincidir con el cableado real.** Si V01 y V02 no están de verdad en
+las salidas 1 y 2 del UC511 #01, la separación protege al equipo equivocado.
+
 ## Poner en marcha una finca nueva
 
 1. **Obtener el plano.** Lista de válvulas con su posición en el tablero.
-2. **Rellenar el mapa.** Una fila por válvula, con su pin de entrada. El orden de las filas
-   determina el número de válvula, su registro y su posición en el panel.
+2. **Rellenar el mapa.** Una fila por válvula, con su pin de entrada, su UC511 y su salida.
+   El orden de las filas determina el número de válvula, su registro y su posición en el
+   panel. Marcar en `kActuators` qué UC511 están instalados.
 3. **Compilar.** Si el mapa es incoherente, **no compila**. Ver la tabla de abajo.
 4. **Configurar el UC100** con un canal por válvula, según
    [`register-map.md`](../specs/002-modbus-esclavo-rs485/contracts/register-map.md) §5.
@@ -103,6 +134,12 @@ Toda inconsistencia se detecta **al compilar**, no en campo.
 | `valveId` fuera de rango | `MAP-V5: valveId fuera de rango (0..7)` |
 | Dirección sin asignar | `MAP-V6: direccion de nodo sin asignar` |
 | **Un pin pisa el DE/RE del RS485** | `MAP-V9: un pin de entrada pisa el pin DE/RE del transceptor RS485` |
+| Válvula apunta a un UC511 que no existe | `MAP-V13: una valvula apunta a un UC511 que no existe en kActuators` |
+| Salida distinta de 1 o 2 | `MAP-V14: salida de UC511 invalida (solo 1 o 2)` |
+| Dos válvulas en la misma salida | `MAP-V15: dos valvulas en la misma salida del mismo UC511` |
+| Tres válvulas en un UC511 | `MAP-V16: un UC511 tiene mas de 2 valvulas` |
+| UC511 declarado sin válvulas | `MAP-V17: un UC511 declarado no tiene ninguna valvula` |
+| Separación menor que la que tolera el UC511 | `TC-01: la separacion entre comandos no puede ser menor que la que tolera el UC511...` |
 
 **MAP-V9 es nueva** y cierra un hueco real: si un `inputPin` coincidiera con el pin de
 control de dirección del transceptor (`kRs485DeRePin`, el pin 6), leer un interruptor
@@ -182,25 +219,26 @@ número de válvula ES la dirección de registro.
 ### Paso 4 — Crear las reglas IF-THEN (lo que acciona la válvula)
 
 Después de leer el valor, el UC100 usa **reglas IF-THEN** para disparar el comando de radio
-D2D hacia el **UC501** que acciona la válvula. Por cada válvula se crean **dos reglas**:
+D2D hacia el **UC511** que acciona la válvula (el UC501 no sirve de agente D2D). Por cada
+válvula se crean **dos reglas**, con una sola acción cada una:
 
 ```
-IF  canal(válvula N) == 1  →  disparar D2D a UC501(N)  →  ABRIR
-IF  canal(válvula N) == 0  →  disparar D2D a UC501(N)  →  CERRAR
+IF  canal(válvula N) Above 0.5  →  D2D código N01  →  ABRIR
+IF  canal(válvula N) Below 0.5  →  D2D código N00  →  CERRAR
 ```
 
-### Paso 5 — Poner el `lockout time` de la apertura en > 0 (clave)
+Los códigos, canales y reglas exactos del piloto están en
+[piloto-8-valvulas-d2d.md](piloto-8-valvulas-d2d.md).
 
-Es el ajuste más fácil de pasar por alto y el que sostiene toda la estrategia de re-aserción:
+### Paso 5 — `Lockout` y `Delay Time`
 
-- Con `lockout time = 0`, la condición se detecta **una sola vez**. Si ese primer comando
-  se pierde por radio, **nunca se recupera**.
-- Con `lockout time > 0` (por ejemplo unos segundos), mientras el registro siga valiendo
-  `1`, el UC100 **vuelve a emitir** el comando y un UC501 que perdió el mensaje captura uno
-  posterior. Es lo que implementa **FR-115** en el lado del puente.
-
-Con `0`, el sistema funciona en teoría pero queda sin red de seguridad ante pérdida de
-radio. **No configurarlo en `0`.**
+- **`Delay Time` = 0.** No sirve para separar comandos: medido en el piloto, si la
+  condición desaparece durante la espera, la acción se ejecuta igual. La separación entre
+  comandos al mismo UC511 la hace el firmware (spec 003).
+- **`Lockout` sin marcar.** Si con la condición sostenida el UC100 vuelve a emitir la
+  orden (la re-aserción de **FR-115**) está pendiente de medir en el piloto (prueba B4).
+  Mientras tanto, la red de seguridad ante una orden perdida es el `Duration` del UC511,
+  por encima del pulso de riego.
 
 ### Paso 6 — Verificar con el botón Fetch
 

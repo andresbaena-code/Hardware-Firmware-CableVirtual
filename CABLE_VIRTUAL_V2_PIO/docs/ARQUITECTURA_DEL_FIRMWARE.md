@@ -281,8 +281,8 @@ anterior: el recorrido orden → confirmación devolvía siempre el estado contr
 
 | Archivo | Qué contiene |
 |---|---|
-| `lib/wiga_config/installation_map.h` | Mapa: válvula → pin del tablero. Validado al compilar |
-| `lib/wiga_config/timing_config.h` | Identificador de esclavo, tiempos, geometría del panel |
+| `lib/wiga_config/installation_map.h` | Mapa: válvula → pin del tablero, UC511 y salida; UC511 instalados. Validado al compilar |
+| `lib/wiga_config/timing_config.h` | Identificador de esclavo, tiempos (incluida la separación de 8 s por UC511), geometría del panel |
 
 ### Protocolo (capa pura, comprobable sin hardware)
 
@@ -297,6 +297,7 @@ anterior: el recorrido orden → confirmación devolvía siempre el estado contr
 | Archivo | Qué contiene |
 |---|---|
 | `lib/wiga_control/valve_publisher.cpp` | Leer el tablero, antirrebotar, publicar |
+| `lib/wiga_control/command_spacer.cpp` | Turnos por UC511: nunca dos cambios del mismo equipo a menos de 8 s (spec 003) |
 | `lib/wiga_control/debouncer.cpp` | Antirrebote de 50 ms |
 | `lib/wiga_hal/rs485_stream_adapter.cpp` | `Serial2` + MAX485 en PH3, transmisión no bloqueante |
 | `lib/wiga_hal/lcd_display_adapter.cpp` | Panel 20x4 por I2C |
@@ -307,7 +308,7 @@ anterior: el recorrido orden → confirmación devolvía siempre el estado contr
 |---|---|
 | `test/test_modbus/` | CRC, tramado, excepciones y **regresión de los defectos auditados** |
 | `test/test_integration/` | Del pin físico a la trama en el bus |
-| `test/test_control/`, `test/test_domain/` | Antirrebote, tipos y aritmética temporal |
+| `test/test_control/`, `test/test_domain/` | Antirrebote, tipos, aritmética temporal, mapa de equipos y turnos por UC511 |
 
 ---
 

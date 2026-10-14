@@ -158,6 +158,39 @@ lectura de `0`.
 
 ---
 
+## Bloque 4 — Spec 003: separación de comandos por UC511
+
+Procedimiento: [quickstart de la spec 003](../specs/003-retardo-apertura-cancelable/quickstart.md).
+Maestro de escritorio leyendo los registros 0–8 cada 500 ms con marca de tiempo, y consola
+serie abierta. V01/V02 comparten el UC511 #01; V09 pertenece al #05, no instalado.
+
+### 4.1 — Banco (sin UC100)
+
+| # | Acción en el tablero | Esperado | Obtenido | ✔ / ✘ / NP |
+|---|---|---|---|---|
+| B-1 | Subir V01 | reg 0 = `1` en el siguiente sondeo; consola `TX 0 1` | | |
+| B-2 | Con V01 arriba > 8 s: bajar V01 y subir V02 a la vez | reg 0 = `0` al instante; `WAIT 1`; reg 1 = `1` ~8 s después | | |
+| B-3 | Bajar V02 y subir V03 a la vez | reg 1 y reg 2 cambian en el mismo sondeo | | |
+| B-4 | Justo tras B-3, subir y bajar V04 en 3 s | reg 3 nunca vale `1`; consola `CANC 3` | | |
+| B-5 | Subir V09 | reg 8 sigue en `0`; LCD `-` en V09; `NOINST 8` una vez | | |
+| B-6 | Con V01 arriba, resetear la placa | reg 0 = `1` en el primer sondeo tras el arranque | | |
+
+### 4.2 — Campo (piloto: UC100 + UC511 #01–#04)
+
+Antes de empezar: cableado verificado contra el mapa (V01/V02 en UC511 #01, salidas 1/2,
+y así con los demás) ☐
+
+| # | Prueba | Aprobada si | Obtenido | ✔ / ✘ / NP |
+|---|---|---|---|---|
+| C-1 | 10 cambios V01→V02 (mismo UC511) | las dos válvulas responden 10 de 10 | | |
+| C-2 | 10 cambios V02→V03 (UC511 distintos) | sin espera añadida, 10 de 10 | | |
+| C-3 | 10 pedidos revertidos dentro del intervalo | ninguna válvula se mueve | | |
+| C-4 | 10 cierres pedidos 3 s después de abrir | las 10 cierran | | |
+| C-5 | 10 reinicios con válvulas regando | ninguna cierra | | |
+| C-6 | Secuencia completa de un bloque (7 + 7 min) | primera 7:00, segunda 6:52 ± 2 s | | |
+
+---
+
 ## Registro de memoria (puerta de calidad 3 de la constitución)
 
 Del reporte de compilación de la versión probada:
@@ -174,6 +207,7 @@ Del reporte de compilación de la versión probada:
 | Bloque | Resultado |
 |---|---|
 | 0 — El bus vive (0.1 y 0.2) | ☐ Aprobado ☐ Rechazado ☐ NP |
+| 4 — Spec 003, banco (B-1..B-6) y campo (C-1..C-6) | ☐ Aprobado ☐ Rechazado ☐ NP |
 | 1 — Lectura del tablero (mapa, 24/24) | ☐ Aprobado ☐ Rechazado ☐ NP |
 | 2 — Lo que debe rechazar | ☐ Aprobado ☐ Rechazado ☐ NP |
 | 3 — B-08, una hora de sondeo continuo | ☐ Aprobado ☐ Rechazado ☐ NP |

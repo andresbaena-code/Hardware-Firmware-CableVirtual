@@ -33,6 +33,7 @@ REQUISITOS_DE_PROYECTO = {
     "FR-033",  # sketches originales conservados
     "FR-034",  # documentacion de puesta en marcha
     "FR-125",  # retirada del codigo huerfano: se verifica en el repositorio
+    "FR-218",  # guias del piloto D2D al dia: se verifica en la documentacion
     "NFR-001",  # presupuesto de RAM
     "NFR-002",  # operacion prolongada
     "NFR-003",  # comportamiento electrico no empeora

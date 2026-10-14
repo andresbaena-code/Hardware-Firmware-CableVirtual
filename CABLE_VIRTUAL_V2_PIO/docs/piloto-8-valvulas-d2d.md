@@ -9,13 +9,24 @@ Alcance: probar el enlace UC100 -> D2D -> UC511 -> valvula latch de extremo a
 extremo, con 8 valvulas reales, ANTES de comprar el resto del material para
 las 24. Usa el UC100 y el bus RS485 que YA ESTAN FUNCIONANDO.
 
-## 0. Esto NO toca el firmware del ATmega
+## 0. Lo que pone el firmware del ATmega
 
-El Mega sigue siendo el mismo esclavo Modbus de siempre, en `Serial2`, sin
-ningun cambio. Desde su lado no existe diferencia entre que le pregunte un
-UC100 o tres: solo responde a quien le pregunte con el ID correcto. El cambio
-de firmware para varios buses RS485 (necesario para llegar a 24 valvulas) NO
-aplica a este piloto y se deja para cuando se escale.
+El Mega es el mismo esclavo Modbus de siempre, en `Serial2`. Desde su lado no
+existe diferencia entre que le pregunte un UC100 o tres. El cambio de firmware
+para varios buses RS485 (necesario para llegar a 24 valvulas) NO aplica a este
+piloto y se deja para cuando se escale.
+
+Lo que SI aporta el firmware desde la spec 003 (FR-218) es la **separacion de
+comandos por UC511**: un UC511 pierde sin aviso el segundo de dos comandos que
+le lleguen con menos de 5 s entre ellos, asi que el Mega nunca publica dos
+cambios de valvulas del mismo UC511 con menos de **8 s**. En el cambio de V01 a
+V02 del mismo bloque, V01 cierra al instante y V02 abre 8 s despues. Por eso el
+reparto de valvulas por UC511 de la seccion 6 tiene que coincidir con el mapa
+de `lib/wiga_config/installation_map.h` y con el cableado real.
+
+Ademas, el firmware solo publica las valvulas de los UC511 marcados como
+instalados (#01 a #4 en este piloto). Las demas quedan en 0 y el LCD las
+muestra con `-`.
 
 ## 1. Por que 8 valvulas y no mas, en esta fase
 
@@ -23,10 +34,9 @@ Con cierre EXPLICITO (el UC100 manda abrir y manda cerrar, sin depender del
 temporizador del UC511) cada valvula gasta 2 reglas. 8 valvulas x 2 =
 **16 de las 16 reglas de un UC100**. Cabe justo, sin ninguna regla de reserva.
 
-Este piloto NO depende de si el temporizador `Duration` del UC511 se rearma o
-no, porque no se usa como mecanismo de cierre normal aqui: el UC100 cierra
-explicitamente. El `Duration` se deja puesto solo como red de seguridad de
-ultima instancia (ver seccion 6).
+El cierre lo manda el UC100 cuando el tablero baja la entrada. El temporizador
+`Duration` del UC511 queda como red de seguridad: la valvula cierra por
+**cualquiera de las dos**, la orden de cierre o el tiempo (ver seccion 6).
 
 ## 2. Requisitos previos, identicos a los del despliegue completo
 
@@ -84,33 +94,37 @@ Retry Times `3`.
 
 ## 5. Reglas IF-THEN, 16 de 16
 
-| Regla | IF: condicion | THEN: 3 acciones con el MISMO codigo | Lock time |
-|---|---|---|---|
-| 1 | Channel 1 **is True** | D2D `0101` = abrir V01, retardos 0 / 2000 / 4000 ms | 300000 |
-| 2 | Channel 1 **is False** | D2D `0100` = cerrar V01, retardos 0 / 2000 / 4000 ms | 300000 |
-| 3 | Channel 2 **is True** | D2D `0201` = abrir V02, retardos 0 / 2000 / 4000 ms | 300000 |
-| 4 | Channel 2 **is False** | D2D `0200` = cerrar V02, retardos 0 / 2000 / 4000 ms | 300000 |
-| 5 | Channel 3 **is True** | D2D `0301` = abrir V03, retardos 0 / 2000 / 4000 ms | 300000 |
-| 6 | Channel 3 **is False** | D2D `0300` = cerrar V03, retardos 0 / 2000 / 4000 ms | 300000 |
-| 7 | Channel 4 **is True** | D2D `0401` = abrir V04, retardos 0 / 2000 / 4000 ms | 300000 |
-| 8 | Channel 4 **is False** | D2D `0400` = cerrar V04, retardos 0 / 2000 / 4000 ms | 300000 |
-| 9 | Channel 5 **is True** | D2D `0501` = abrir V05, retardos 0 / 2000 / 4000 ms | 300000 |
-| 10 | Channel 5 **is False** | D2D `0500` = cerrar V05, retardos 0 / 2000 / 4000 ms | 300000 |
-| 11 | Channel 6 **is True** | D2D `0601` = abrir V06, retardos 0 / 2000 / 4000 ms | 300000 |
-| 12 | Channel 6 **is False** | D2D `0600` = cerrar V06, retardos 0 / 2000 / 4000 ms | 300000 |
-| 13 | Channel 7 **is True** | D2D `0701` = abrir V07, retardos 0 / 2000 / 4000 ms | 300000 |
-| 14 | Channel 7 **is False** | D2D `0700` = cerrar V07, retardos 0 / 2000 / 4000 ms | 300000 |
-| 15 | Channel 8 **is True** | D2D `0801` = abrir V08, retardos 0 / 2000 / 4000 ms | 300000 |
-| 16 | Channel 8 **is False** | D2D `0800` = cerrar V08, retardos 0 / 2000 / 4000 ms | 300000 |
+| Regla | IF: condicion | THEN: una sola accion | Delay Time | Lockout |
+|---|---|---|---|---|
+| 1 | Channel 1 **Above 0.5** | D2D `0101` = abrir V01 | 0 | sin marcar |
+| 2 | Channel 1 **Below 0.5** | D2D `0100` = cerrar V01 | 0 | sin marcar |
+| 3 | Channel 2 **Above 0.5** | D2D `0201` = abrir V02 | 0 | sin marcar |
+| 4 | Channel 2 **Below 0.5** | D2D `0200` = cerrar V02 | 0 | sin marcar |
+| 5 | Channel 3 **Above 0.5** | D2D `0301` = abrir V03 | 0 | sin marcar |
+| 6 | Channel 3 **Below 0.5** | D2D `0300` = cerrar V03 | 0 | sin marcar |
+| 7 | Channel 4 **Above 0.5** | D2D `0401` = abrir V04 | 0 | sin marcar |
+| 8 | Channel 4 **Below 0.5** | D2D `0400` = cerrar V04 | 0 | sin marcar |
+| 9 | Channel 5 **Above 0.5** | D2D `0501` = abrir V05 | 0 | sin marcar |
+| 10 | Channel 5 **Below 0.5** | D2D `0500` = cerrar V05 | 0 | sin marcar |
+| 11 | Channel 6 **Above 0.5** | D2D `0601` = abrir V06 | 0 | sin marcar |
+| 12 | Channel 6 **Below 0.5** | D2D `0600` = cerrar V06 | 0 | sin marcar |
+| 13 | Channel 7 **Above 0.5** | D2D `0701` = abrir V07 | 0 | sin marcar |
+| 14 | Channel 7 **Below 0.5** | D2D `0700` = cerrar V07 | 0 | sin marcar |
+| 15 | Channel 8 **Above 0.5** | D2D `0801` = abrir V08 | 0 | sin marcar |
+| 16 | Channel 8 **Below 0.5** | D2D `0800` = cerrar V08 | 0 | sin marcar |
 | | | **16 de 16 reglas usadas** | |
 
-Si configuras el canal como `Coil` o `Discrete` en vez de `Holding Register`,
-la condicion queda directamente en True/False en vez de un umbral en coma
-flotante. El firmware lo admite: responde a FC01 y FC02 ademas de FC03/FC04.
+El umbral es 0,5 porque el registro solo vale 0 o 1: `Above 0.5` es "vale 1" y
+`Below 0.5` es "vale 0", sin depender de como compare el UC100 la igualdad en
+coma flotante.
 
-**Las tres acciones de cada regla envian el MISMO codigo con retardos 0, 2000 y
-4000 ms.** D2D no tiene acuse de recibo, asi que cada orden se emite tres veces
-escalonada para que un paquete perdido no deje la valvula desincronizada.
+**Una sola accion por regla, sin `Delay Time`.**
+
+- ToolBox no deja repetir la misma accion en una regla ("Action can not be
+  repeated"), asi que la rafaga de tres envios no es configurable.
+- El `Delay Time` del UC100 NO sirve para separar comandos: medido en el
+  piloto, si la condicion desaparece durante la espera la accion se ejecuta
+  igual. La separacion la hace el firmware (seccion 0).
 
 ## 6. Reparto de valvulas por UC511
 
@@ -121,24 +135,31 @@ escalonada para que un paquete perdido no deje la valvula desincronizada.
 | #03 | V05 y V06 | V05 | V06 | `0501` abre / `0500` cierra V05 &nbsp;&nbsp; `0601` abre / `0600` cierra V06 |
 | #04 | V07 y V08 | V07 | V08 | `0701` abre / `0700` cierra V07 &nbsp;&nbsp; `0801` abre / `0800` cierra V08 |
 
-En la regla de apertura de cada UC511, deja `Time Control` habilitado con
-`Duration` = 900 s (15 minutos) como red de seguridad: si el enlace se cae con
-la valvula abierta y ni la orden de cierre ni sus dos reintentos llegan, cierra
-sola. La regla de cierre explicito no necesita temporizador.
+En cada UC511:
+
+- Regla de apertura: `Time Control` habilitado con `Duration` = **600 s (10
+  min)**. El riego normal dura 7 min y lo cierra la orden del tablero; si esa
+  orden se pierde, el UC511 cierra solo a los 10 min.
+- Regla de cierre: sin temporizador.
+- `When Power is Restored` = `Device ON, Valve Off`.
+- `Auto-Confirmed Mechanism` desactivado.
+- Clase **C** (escucha permanente; en clase A no recibe las ordenes D2D).
 
 ## 7. Tiempos
 
 | Parametro | Donde | Valor | Motivo |
 |---|---|---|---|
-| `Lock time` | condicion de cada regla del UC100 | 300000 ms, 5 min | Con 0 la condicion se detecta UNA sola vez y nunca se reafirma. |
-| Retardos de las 3 acciones | cada regla del UC100 | 0 / 2000 / 4000 ms | Rafaga de tres envios sin acuse de recibo. |
-| `Duration` | regla de apertura del UC511 | 900 s, 15 min | Red de seguridad, no el mecanismo de cierre normal. |
+| `Lockout` | condicion de cada regla del UC100 | sin marcar | Cada cambio del registro dispara una sola orden. Si se reafirma o no con la condicion sostenida esta pendiente de medir (prueba B4). |
+| `Delay Time` | accion de cada regla del UC100 | 0 | No se cancela si la condicion desaparece: no sirve para separar comandos. |
+| Separacion por UC511 | firmware del Mega (`kCommandSpacingMs`) | 8 s | El UC511 pierde el segundo de dos comandos a menos de 5 s. |
+| `Duration` | regla de apertura del UC511 | 600 s, 10 min | Red de seguridad por encima del pulso de 7 min. |
 | `Reporting Interval` | General del UC100 | 1 minuto | Minimo configurable. NO dejarlo en los 20 de fabrica. |
 
-**Antes de fijar el `Lock time`, mide la cadencia real de sondeo del UC100**
-mirando la linea de estado del LCD: si se queda fija en `PEDIDO x TABLERO`, el
-sondeo es mas rapido que 30 s; si alterna con `PEDIDO - SIN BUS`, es mas lento y
-hay que subir estos tiempos.
+**Efecto en el riego:** con pulsos de 7 min en secuencia, la primera valvula de
+cada bloque riega 7 min y la segunda 6 min 52 s, porque abre 8 s despues de que
+cierre su vecina del mismo UC511. Las valvulas de UC511 distintos no se esperan.
+
+Latencia medida tablero -> valvula: ~1 s (el UC100 sondea casi continuamente).
 
 ## 8. Mapa completo del piloto
 
@@ -166,10 +187,15 @@ hay que subir estos tiempos.
 2. Confirmar el direccionamiento base 0 con el canal 9, `Address` 24.
 3. Medir la cadencia de sondeo del UC100 con la linea de estado del LCD.
 4. Dar de alta los 8 canales y las 16 reglas de la seccion 5.
-5. Grabar en cada UC511 sus dos codigos D2D y el `Duration` de seguridad.
-6. Probar valvula por valvula: energizar la entrada del tablero, cronometrar
+5. Grabar en cada UC511 sus dos codigos D2D, el `Duration` de seguridad y los
+   ajustes de la seccion 6.
+6. Verificar que el cableado coincide con la seccion 8 (que V01 y V02 esten de
+   verdad en las salidas 1 y 2 del UC511 #01, y asi con los demas).
+7. Probar valvula por valvula: energizar la entrada del tablero, cronometrar
    hasta que abre; desenergizar, cronometrar hasta que cierra.
-7. Prueba de una hora con las 8 valvulas y caudal real antes de escalar.
+8. Probar el cambio dentro de un bloque (V01 -> V02) 10 veces: V01 cierra al
+   instante, V02 abre ~8 s despues, las dos responden siempre.
+9. Prueba de una hora con las 8 valvulas y caudal real antes de escalar.
 
 Cuando el piloto quede validado, escalar a las 24 valvulas es el documento
 [configuracion-radio-d2d.md](configuracion-radio-d2d.md): ese si necesita los
