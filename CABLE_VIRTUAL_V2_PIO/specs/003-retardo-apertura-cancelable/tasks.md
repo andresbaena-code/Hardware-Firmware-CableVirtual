@@ -187,7 +187,7 @@ panel `-`.
 - [X] T044 [P] Actualizar `docs/ARQUITECTURA_DEL_FIRMWARE.md` y la sección de estructura de `AGENTS.md` con `CommandSpacer`
 - [X] T045 [P] Añadir a `docs/diagnostico.md` las trazas `WAIT`, `CANC`, `NOINST` y el símbolo `-` del panel
 - [X] T046 [P] Añadir a `docs/acta-pruebas-banco.md` un bloque "Spec 003" con las tablas de banco B-1..B-6 y campo C-1..C-6 de [quickstart.md](quickstart.md)
-- [ ] T047 Pruebas de banco B-1..B-6 de [quickstart.md](quickstart.md) en la placa real (con el responsable técnico) y registro en el acta
+- [X] T047 Pruebas de banco B-1..B-6 de [quickstart.md](quickstart.md) en la placa real (con el responsable técnico) y registro en el acta
 - [ ] T048 Pruebas de campo C-1..C-6 de [quickstart.md](quickstart.md) en el piloto, verificando antes que el cableado coincide con el mapa, y registro en el acta
 
 ---
