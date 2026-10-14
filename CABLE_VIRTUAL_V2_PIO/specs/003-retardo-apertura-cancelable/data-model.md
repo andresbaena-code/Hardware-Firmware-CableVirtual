@@ -98,6 +98,6 @@ deseado = (equipo instalado) ? panelRequest(nivel estable) : Closed
 |---|---|---|
 | SP-I1 | Dos cambios publicados del mismo equipo están separados al menos `kCommandSpacingMs` (salvo la siembra) | FR-204 |
 | SP-I2 | `published` solo cambia hacia el `deseado` vigente; nunca se publica un estado que el tablero ya no pide | FR-206, FR-209 |
-| SP-I3 | Ningún pendiente espera más de `2 × kCommandSpacingMs` | caso borde "espera máxima" |
+| SP-I3 | Ningún pendiente espera `3 × kCommandSpacingMs` o más | caso borde "espera máxima" |
 | SP-I4 | Una válvula de equipo no instalado tiene siempre `published = Closed` | FR-212 |
 | SP-I5 | Tras `begin()`, `published` de cada válvula = deseado según las entradas | FR-211 |

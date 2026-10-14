@@ -85,11 +85,21 @@ margen de SRAM actual.
 Un pendiente cuyo equipo está libre se publica en la misma vuelta en que se crea
 (FR-205): los pasos 2 y 3 ocurren en la misma llamada.
 
-**Espera máxima**: con dos válvulas por equipo y orden por antigüedad, un pendiente
-tiene como mucho otro cambio por delante más el último publicado. Un cierre puede
-adelantar a una apertura más antigua una sola vez, porque la misma válvula no puede
-volver a cerrar sin haber abierto antes. Cota: **2 × intervalo** = 16 s. Se verifica con
-prueba.
+**Espera máxima** *(corregida en la implementación)*: un pendiente espera lo que falte
+del intervalo en curso, más como mucho dos turnos de la otra válvula de su equipo: uno
+por antigüedad (un pedido suyo más antiguo) y otro por prioridad (un cierre que la otra
+válvula pida después). No puede haber un tercero: el siguiente pedido de la otra
+válvula sería más nuevo, y si nuestro pendiente es un cierre, un cierre ajeno no le gana
+por prioridad. Cota: **menos de 3 × intervalo** (24 s).
+
+El plan decía 2 × intervalo. La prueba
+`test_FR207_peor_caso_un_cierre_adelanta_dos_veces` reproduce una espera de 23 s, y
+`test_FR207_espera_maxima_bajo_pedidos_al_azar` verifica la cota en una hora simulada.
+
+Alternativa descartada: ordenar solo por antigüedad, con el cierre como desempate.
+Acotaría la espera a 2 intervalos, pero en el caso más común del campo -el tablero
+detecta la subida de B una vuelta antes que la bajada de A- abriría B primero y dejaría
+las dos válvulas abiertas durante un intervalo.
 
 ## R-305 — Arranque
 

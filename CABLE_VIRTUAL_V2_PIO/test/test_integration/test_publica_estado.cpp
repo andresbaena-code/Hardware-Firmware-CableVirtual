@@ -81,13 +81,13 @@ struct System {
 void test_el_arranque_siembra_desde_los_pines_fisicos(void) {
     System sys;
     sys.inputs.requestOpen(3);   // el interruptor 3 pide riego ANTES de arrancar
-    sys.inputs.requestOpen(17);
+    sys.inputs.requestOpen(7);
     sys.boot();
 
     // FR-116: el primer sondeo ya devuelve el estado correcto. Si el esclavo
     // contestara antes de sembrar, devolveria 0 y el UC100 cerraria la valvula.
     TEST_ASSERT_EQUAL_UINT16(1, sys.pollValve(3, kT0));
-    TEST_ASSERT_EQUAL_UINT16(1, sys.pollValve(17, kT0 + 10));
+    TEST_ASSERT_EQUAL_UINT16(1, sys.pollValve(7, kT0 + 10));
     TEST_ASSERT_EQUAL_UINT16(0, sys.pollValve(0, kT0 + 20));
 }
 
@@ -158,6 +158,10 @@ void test_el_reposo_no_pide_riego_en_ninguna_valvula(void) {
 
 /// FR-118: las 24 valvulas, no un subconjunto. Regresion del truncamiento que
 /// dejaba 12 de 24 permanentemente invisibles.
+///
+/// Desde la spec 003 (FR-212) una valvula de un UC511 no instalado publica
+/// siempre 0, pero su registro sigue existiendo y respondiendo: lo que FR-118
+/// exige es que el maestro pueda leer las 24, y eso no cambia.
 void test_las_24_valvulas_se_publican(void) {
     System sys;
     sys.boot();
@@ -169,7 +173,9 @@ void test_las_24_valvulas_se_publican(void) {
     sys.settle(config::kCommandSpacingMs + config::kDebounceMs * 3);
 
     for (uint8_t i = 0; i < config::kValveCount; ++i) {
-        TEST_ASSERT_EQUAL_UINT16(1, sys.pollValve(i, sys.clock.nowMs() + i));
+        const uint16_t expected =
+            config::actuatorInstalled(config::actuatorOf(i)) ? 1 : 0;
+        TEST_ASSERT_EQUAL_UINT16(expected, sys.pollValve(i, sys.clock.nowMs() + i));
     }
 }
 
@@ -182,14 +188,14 @@ void test_las_24_valvulas_se_publican(void) {
 void test_riego_sostenido_nunca_devuelve_cero(void) {
     System sys;
     sys.boot();
-    sys.inputs.requestOpen(9);
+    sys.inputs.requestOpen(5);
     sys.settle();
 
     uint32_t ceros = 0;
     for (uint32_t i = 0; i < 3000; ++i) {
         sys.clock.advance(5);
         sys.publisher.tick();
-        if (sys.pollValve(9, sys.clock.nowMs()) != 1) {
+        if (sys.pollValve(5, sys.clock.nowMs()) != 1) {
             ++ceros;
         }
     }
@@ -202,16 +208,16 @@ void test_riego_sostenido_nunca_devuelve_cero(void) {
 void test_un_reinicio_republica_el_riego_en_curso(void) {
     System sys;
     sys.boot();
-    sys.inputs.requestOpen(11);
+    sys.inputs.requestOpen(6);
     sys.settle();
-    TEST_ASSERT_EQUAL_UINT16(1, sys.pollValve(11, sys.clock.nowMs()));
+    TEST_ASSERT_EQUAL_UINT16(1, sys.pollValve(6, sys.clock.nowMs()));
 
     // Reinicio: banco a cero y siembra de nuevo, con el interruptor intacto.
     System reiniciado;
-    reiniciado.inputs.requestOpen(11);
+    reiniciado.inputs.requestOpen(6);
     reiniciado.boot(sys.clock.nowMs() + 2000);
 
-    TEST_ASSERT_EQUAL_UINT16(1, reiniciado.pollValve(11, reiniciado.clock.nowMs()));
+    TEST_ASSERT_EQUAL_UINT16(1, reiniciado.pollValve(6, reiniciado.clock.nowMs()));
 }
 
 /// FR-116 al cruzar el desbordamiento de millis() a los 49,7 dias. Ninguna
@@ -221,23 +227,23 @@ void test_el_desbordamiento_del_reloj_no_altera_el_riego(void) {
     // Arranca a 30 segundos del desbordamiento de 32 bits.
     const uint32_t antesDelWrap = 0xFFFFFFFFUL - 30000UL;
     sys.boot(antesDelWrap);
-    sys.inputs.requestOpen(13);
+    sys.inputs.requestOpen(4);
     sys.settle();
-    TEST_ASSERT_EQUAL_UINT16(1, sys.registers.get(config::valveRegister(13)));
+    TEST_ASSERT_EQUAL_UINT16(1, sys.registers.get(config::valveRegister(4)));
 
     // Cruza el desbordamiento sondeando sin parar.
     uint32_t ceros = 0;
     for (uint32_t i = 0; i < 12000; ++i) {
         sys.clock.advance(5);
         sys.publisher.tick();
-        if (sys.registers.get(config::valveRegister(13)) != 1) {
+        if (sys.registers.get(config::valveRegister(4)) != 1) {
             ++ceros;
         }
     }
     TEST_ASSERT_EQUAL_UINT32(0, ceros);
 
     // Y sigue respondiendo correctamente al otro lado del desbordamiento.
-    TEST_ASSERT_EQUAL_UINT16(1, sys.pollValve(13, sys.clock.nowMs()));
+    TEST_ASSERT_EQUAL_UINT16(1, sys.pollValve(4, sys.clock.nowMs()));
 }
 
 /// El antirrebote no deja pasar un microcorte del contacto. Sin el, cualquier
@@ -245,21 +251,21 @@ void test_el_desbordamiento_del_reloj_no_altera_el_riego(void) {
 void test_un_rebote_del_contacto_no_corta_el_riego(void) {
     System sys;
     sys.boot();
-    sys.inputs.requestOpen(15);
+    sys.inputs.requestOpen(7);
     sys.settle();
-    TEST_ASSERT_EQUAL_UINT16(1, sys.registers.get(config::valveRegister(15)));
+    TEST_ASSERT_EQUAL_UINT16(1, sys.registers.get(config::valveRegister(7)));
 
     // Microcorte de 10 ms, por debajo de la ventana de antirrebote de 50 ms.
-    sys.inputs.requestClose(15);
+    sys.inputs.requestClose(7);
     for (uint8_t i = 0; i < 2; ++i) {
         sys.clock.advance(5);
         sys.publisher.tick();
-        TEST_ASSERT_EQUAL_UINT16(1, sys.registers.get(config::valveRegister(15)));
+        TEST_ASSERT_EQUAL_UINT16(1, sys.registers.get(config::valveRegister(7)));
     }
-    sys.inputs.requestOpen(15);
+    sys.inputs.requestOpen(7);
     sys.settle();
 
-    TEST_ASSERT_EQUAL_UINT16(1, sys.registers.get(config::valveRegister(15)));
+    TEST_ASSERT_EQUAL_UINT16(1, sys.registers.get(config::valveRegister(7)));
 }
 
 // =============================================================================
@@ -281,9 +287,11 @@ void test_el_panel_solo_muestra_cero_y_uno(void) {
 void test_el_diagnostico_cuenta_las_valvulas_regando(void) {
     System sys;
     sys.boot();
-    sys.inputs.requestOpen(4);
-    sys.inputs.requestOpen(8);
-    sys.inputs.requestOpen(20);
+    // Una por UC511 instalado, para que la separacion de la spec 003 no las
+    // escalone.
+    sys.inputs.requestOpen(0);   // UC511 #01
+    sys.inputs.requestOpen(2);   // UC511 #02
+    sys.inputs.requestOpen(4);   // UC511 #03
     sys.settle();
 
     sys.publisher.publishDiagnostics(0, 0, 0, 0, 0);

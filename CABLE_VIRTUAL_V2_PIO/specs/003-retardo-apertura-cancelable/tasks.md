@@ -97,12 +97,12 @@ los dos registros cambian en esa vuelta.
 
 ### Tests for User Story 2
 
-- [ ] T020 [P] [US2] En `test/test_control/test_command_spacer.cpp`: `test_FR208_equipos_distintos_no_se_esperan` (vector 4) y `test_FR208_espera_en_un_equipo_no_retrasa_otro`
-- [ ] T021 [P] [US2] En `test/test_integration/test_separacion_uc511.cpp`: `test_FR208_del_pin_al_registro_cambio_v02_a_v03_sin_espera`
+- [X] T020 [P] [US2] En `test/test_control/test_command_spacer.cpp`: `test_FR208_equipos_distintos_no_se_esperan` (vector 4) y `test_FR208_espera_en_un_equipo_no_retrasa_otro`
+- [X] T021 [P] [US2] En `test/test_integration/test_separacion_uc511.cpp`: `test_FR208_del_pin_al_registro_cambio_v02_a_v03_sin_espera`
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] Ajustar `lib/wiga_control/command_spacer.cpp` solo si T020/T021 fallan (el estado por equipo de T016 ya debería cumplirlo); ejecutar `$PIO test -e native`
+- [X] T022 [US2] Ajustar `lib/wiga_control/command_spacer.cpp` solo si T020/T021 fallan (el estado por equipo de T016 ya debería cumplirlo); ejecutar `$PIO test -e native`
 
 **Checkpoint**: la secuencia del cliente pierde 8 s solo en la segunda válvula de cada bloque.
 
@@ -117,14 +117,14 @@ sondeo; V02 pedida a los 2 s se publica a los 8 s.
 
 ### Tests for User Story 5
 
-- [ ] T023 [P] [US5] En `test/test_control/test_command_spacer.cpp`: `test_FR211_siembra_publica_sin_esperar` y `test_FR211_siembra_ocupa_solo_equipos_con_valvula_abierta` (vector 10)
-- [ ] T024 [P] [US5] En `test/test_integration/test_separacion_uc511.cpp`: `test_FR211_reinicio_con_v01_regando_registro_en_1_antes_del_bus` y `test_FR211_cambio_tras_arranque_respeta_el_intervalo`
+- [X] T023 [P] [US5] En `test/test_control/test_command_spacer.cpp`: `test_FR211_siembra_publica_sin_esperar` y `test_FR211_siembra_ocupa_solo_equipos_con_valvula_abierta` (vector 10)
+- [X] T024 [P] [US5] En `test/test_integration/test_separacion_uc511.cpp`: `test_FR211_reinicio_con_v01_regando_registro_en_1_antes_del_bus` y `test_FR211_cambio_tras_arranque_respeta_el_intervalo`
 
 ### Implementation for User Story 5
 
-- [ ] T025 [US5] En `lib/wiga_control/command_spacer.cpp`, implementar `begin()` según [research.md R-305](research.md) (regla SP-08)
-- [ ] T026 [US5] En `lib/wiga_control/valve_publisher.cpp`, en `begin()`, sembrar `spacer_` con el mismo estado que se escribe en el banco y con el mismo instante, antes de `refreshDisplay()` (VP-35)
-- [ ] T027 [US5] Ejecutar `$PIO test -e native`, incluidas las pruebas FR-116 de la spec 002 en `test/test_integration/test_publica_estado.cpp`
+- [X] T025 [US5] En `lib/wiga_control/command_spacer.cpp`, implementar `begin()` según [research.md R-305](research.md) (regla SP-08)
+- [X] T026 [US5] En `lib/wiga_control/valve_publisher.cpp`, en `begin()`, sembrar `spacer_` con el mismo estado que se escribe en el banco y con el mismo instante, antes de `refreshDisplay()` (VP-35)
+- [X] T027 [US5] Ejecutar `$PIO test -e native`, incluidas las pruebas FR-116 de la spec 002 en `test/test_integration/test_publica_estado.cpp`
 
 **Checkpoint**: las tres historias P1 completas.
 
@@ -133,21 +133,21 @@ sondeo; V02 pedida a los 2 s se publica a los 8 s.
 ## Phase 6: User Story 3 — Pedido breve o revertido (Priority: P2)
 
 **Goal**: los pendientes se cancelan sin consumir turno; ningún cambio se pierde ni espera
-más de 16 s.
+3 intervalos (24 s) o más.
 
 **Independent Test**: con el UC511 #01 ocupado, subir V02 y bajarla a los 3 s: el
 registro 1 nunca vale `1`.
 
 ### Tests for User Story 3
 
-- [ ] T028 [P] [US3] En `test/test_control/test_command_spacer.cpp`: `test_FR206_apertura_pendiente_se_cancela` (vector 5), `test_FR206_cierre_pendiente_se_cancela_sin_pasar_por_cero` (vector 7), `test_FR206_cancelado_no_consume_turno`, `test_FR204_cierre_pedido_3s_despues_de_abrir_se_publica_a_los_8s` (vector 6), `test_FR207_dos_aperturas_simultaneas_primero_menor_indice` (vector 8), `test_FR207_espera_maxima_dos_intervalos` (vector 12, recorrer secuencias de pedidos cruzados y comprobar que ningún pendiente supera 16000 ms), `test_FR206_nuevo_pedido_tras_cancelar_cuenta_desde_cero`
-- [ ] T029 [P] [US3] En `test/test_integration/test_separacion_uc511.cpp`: `test_FR206_del_pin_al_registro_pedido_revertido_no_publica` con comprobación de la traza `CANC`
+- [X] T028 [P] [US3] En `test/test_control/test_command_spacer.cpp`: `test_FR206_apertura_pendiente_se_cancela` (vector 5), `test_FR206_cierre_pendiente_se_cancela_sin_pasar_por_cero` (vector 7), `test_FR206_cancelado_no_consume_turno`, `test_FR204_cierre_pedido_3s_despues_de_abrir_se_publica_a_los_8s` (vector 6), `test_FR207_dos_aperturas_simultaneas_primero_menor_indice` (vector 8), `test_FR207_peor_caso_un_cierre_adelanta_dos_veces` y `test_FR207_espera_maxima_bajo_pedidos_al_azar` (vector 12: ningún pendiente llega a 3 intervalos; el plan decía 2 y se corrigió), `test_FR206_nuevo_pedido_tras_cancelar_cuenta_desde_cero`
+- [X] T029 [P] [US3] En `test/test_integration/test_separacion_uc511.cpp`: `test_FR206_del_pin_al_registro_pedido_revertido_no_publica` con comprobación de la traza `CANC`
 
 ### Implementation for User Story 3
 
-- [ ] T030 [US3] En `lib/wiga_control/command_spacer.cpp`, completar la cancelación (SP-03) y el orden por antigüedad (SP-04, SP-09) si T028 falla
-- [ ] T031 [US3] En `lib/wiga_control/valve_publisher.cpp`, emitir la traza `CANC` cuando `update()` devuelva `Cancelled` (VP-33)
-- [ ] T032 [US3] Ejecutar `$PIO test -e native`
+- [X] T030 [US3] En `lib/wiga_control/command_spacer.cpp`, completar la cancelación (SP-03) y el orden por antigüedad (SP-04, SP-09) si T028 falla
+- [X] T031 [US3] En `lib/wiga_control/valve_publisher.cpp`, emitir la traza `CANC` cuando `update()` devuelva `Cancelled` (VP-33)
+- [X] T032 [US3] Ejecutar `$PIO test -e native`
 
 **Checkpoint**: los dos huecos de la versión 1 (pedidos de 8–13 s y pedidos simultáneos) cubiertos.
 
@@ -163,14 +163,14 @@ panel `-`.
 
 ### Tests for User Story 4
 
-- [ ] T033 [P] [US4] En `test/test_integration/test_separacion_uc511.cpp`: `test_FR212_valvula_de_equipo_no_instalado_publica_siempre_cero` (vector 11), `test_FR213_aviso_noinst_una_vez_por_pedido` (mantener la entrada arriba varias vueltas y contar una sola traza; bajar y subir de nuevo, contar dos), `test_FR215_panel_muestra_guion_en_equipo_no_instalado` con `FakeDisplay`, `test_FR212_siembra_de_equipo_no_instalado_queda_en_cero`
+- [X] T033 [P] [US4] En `test/test_integration/test_separacion_uc511.cpp`: `test_FR212_valvula_de_equipo_no_instalado_publica_siempre_cero` (vector 11), `test_FR213_aviso_noinst_una_vez_por_pedido` (mantener la entrada arriba varias vueltas y contar una sola traza; bajar y subir de nuevo, contar dos), `test_FR215_panel_muestra_guion_en_equipo_no_instalado` con `FakeDisplay`, `test_FR212_siembra_de_equipo_no_instalado_queda_en_cero`
 
 ### Implementation for User Story 4
 
-- [ ] T034 [US4] En `lib/wiga_control/valve_publisher.h`, añadir `symbol::kNotInstalled = '-'` con comentario (configuración, no confirmación del campo: FR-215, FR-114b de la spec 002)
-- [ ] T035 [US4] En `lib/wiga_control/valve_publisher.cpp`, forzar el deseado a `Closed` cuando `!config::actuatorInstalled(config::actuatorOf(i))`, también en `begin()`; emitir `NOINST` en el flanco del antirrebote hacia "pedido" de esas válvulas (VP-31, VP-33)
-- [ ] T036 [US4] En `lib/wiga_control/valve_publisher.cpp`, en `refreshDisplay()`, mostrar `symbol::kNotInstalled` para las válvulas de equipos no instalados (VP-34)
-- [ ] T037 [US4] Ejecutar `$PIO test -e native`
+- [X] T034 [US4] En `lib/wiga_control/valve_publisher.h`, añadir `symbol::kNotInstalled = '-'` con comentario (configuración, no confirmación del campo: FR-215, FR-114b de la spec 002)
+- [X] T035 [US4] En `lib/wiga_control/valve_publisher.cpp`, forzar el deseado a `Closed` cuando `!config::actuatorInstalled(config::actuatorOf(i))`, también en `begin()`; emitir `NOINST` en el flanco del antirrebote hacia "pedido" de esas válvulas (VP-31, VP-33)
+- [X] T036 [US4] En `lib/wiga_control/valve_publisher.cpp`, en `refreshDisplay()`, mostrar `symbol::kNotInstalled` para las válvulas de equipos no instalados (VP-34)
+- [X] T037 [US4] Ejecutar `$PIO test -e native`
 
 **Checkpoint**: todas las historias completas y verificadas en host.
 

@@ -19,10 +19,23 @@ CommandSpacer::CommandSpacer() {
 
 // --- FR-211: siembra sin esperar ---------------------------------------------
 void CommandSpacer::begin(const ValveState* published, uint32_t nowMs) {
-    (void)nowMs;
+    for (uint8_t a = 0; a < config::kActuatorCount; ++a) {
+        hasLastChange_[a] = false;
+    }
     for (uint8_t i = 0; i < config::kValveCount; ++i) {
         published_[i] = published[i];
         pending_[i]   = false;
+
+        // Si el UC100 arranco a la vez -tablero y puente en la misma
+        // alimentacion-, puede emitir esta apertura en su primer sondeo. Se
+        // cuenta como cambio del equipo para que otro cambio del mismo UC511
+        // no le llegue pegado (research.md R-305). Un equipo con todo cerrado no
+        // emite nada al arrancar y queda libre.
+        if (published[i] == ValveState::Open) {
+            const uint8_t slot   = slotOf(i);
+            lastChangeMs_[slot]  = nowMs;
+            hasLastChange_[slot] = true;
+        }
     }
 }
 

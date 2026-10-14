@@ -38,7 +38,7 @@ argumento.
 | SP-06 | Nunca se autoriza un estado distinto del deseado vigente | FR-209 |
 | SP-07 | El intervalo se mide con `wiga::elapsed()` | FR-210 |
 | SP-08 | `begin()` no espera y ocupa los equipos con alguna válvula en `Open` | FR-211 |
-| SP-09 | Ningún pendiente espera más de `2 × kCommandSpacingMs` | caso borde |
+| SP-09 | Ningún pendiente espera `3 × kCommandSpacingMs` o más | caso borde |
 
 ## 3. Integración en `ValvePublisher`
 
@@ -78,4 +78,4 @@ Intervalo 8000 ms. V01/V02 en el equipo 1, V03 en el equipo 2. Antirrebote ya re
 | 9 | último cambio en t=0xFFFFF000; nuevo pedido en t+1000 | se publica en 0xFFFFF000 + 8000 (con desbordamiento) |
 | 10 | arranque con V01 en `1`; V02 sube en t=2000 | V01=`1` antes del primer sondeo; V02=`1` en t=8000 |
 | 11 | sube V09 (equipo 5 no instalado) | registro 8 sigue en `0`; una traza `NOINST`; panel `-` |
-| 12 | peor caso de espera (pendientes cruzados en un equipo) | ningún pendiente supera 16000 ms |
+| 12 | peor caso de espera (pendientes cruzados en un equipo) | ningún pendiente llega a 24000 ms (peor caso reproducido: 23000 ms) |

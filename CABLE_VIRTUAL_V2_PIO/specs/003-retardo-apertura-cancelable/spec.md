@@ -162,9 +162,13 @@ el primer sondeo.
 
 - **Las dos válvulas de un UC511 pedidas a la vez.** Se publica primero la que se pidió
   antes; si llegaron en la misma vuelta, la de menor índice. La otra espera el intervalo.
-- **Espera máxima.** Un UC511 tiene dos válvulas, así que un cambio tiene como mucho un
-  cambio por delante en su equipo, más el último ya publicado: la espera nunca supera
-  **dos intervalos**.
+- **Espera máxima.** Un cambio espera lo que falte del intervalo en curso más, como
+  mucho, dos turnos: el de un pedido más antiguo de la otra válvula y el de un cierre
+  de esa misma válvula que lo adelante por prioridad. La espera es siempre **menor que
+  tres intervalos** (24 s). Solo se acerca a ese límite si el tablero cambia las dos
+  válvulas de un equipo varias veces en pocos segundos; en la secuencia del cliente la
+  espera es de un intervalo. *(Corregido en la implementación: el plan decía dos
+  intervalos, y una prueba de peor caso mostró una espera de 23 s.)*
 - **Desbordamiento del reloj** (~49,7 días). El intervalo dura lo mismo antes, durante y
   después.
 - **Rebote del interruptor.** El antirrebote existente actúa antes: la separación trabaja
@@ -248,7 +252,7 @@ el primer sondeo.
 ### Excepciones documentadas a la spec 002
 
 - **FR-110** dice que el registro vale `1` "mientras el tablero pida riego". Con esta
-  especificación, un cambio puede publicarse hasta dos intervalos más tarde de lo que lo
+  especificación, un cambio puede publicarse hasta casi tres intervalos más tarde de lo que lo
   pide el tablero, y una válvula de un equipo no instalado vale siempre `0`. Ninguna de las
   dos produce un `0` transitorio en una válvula que está regando, por lo que **FR-116 se
   cumple sin cambios**.

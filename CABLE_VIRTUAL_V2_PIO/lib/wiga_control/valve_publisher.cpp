@@ -1,5 +1,5 @@
 // Cubre: FR-109, FR-110, FR-111, FR-112, FR-114b, FR-115, FR-116, FR-119, FR-122
-//        FR-204, FR-205, FR-209, FR-216  (spec 003)
+//        FR-204, FR-205, FR-209, FR-211, FR-212, FR-213, FR-215, FR-216  (spec 003)
 #include "valve_publisher.h"
 
 namespace wiga {
@@ -29,7 +29,12 @@ void ValvePublisher::begin() {
         const SignalLevel level = inputs_.read(i);
         // FR-112: se interpreta el CABLEADO DEL TABLERO. La inversion por
         // transistor del nodo remoto es otra cosa y no interviene aqui.
-        const ValveState  state = config::panelRequest(level);
+        const ValveState  request = config::panelRequest(level);
+        const ValveState  state   = desiredFor(i, request);
+        if (request == ValveState::Open && !installed(i)) {
+            log_.event(LogLevel::Warn, logtag::kNotInstalled, i,
+                       static_cast<int32_t>(config::actuatorOf(i)));
+        }
 
         debouncers_[i].seed(level, now);
         // El banco queda sembrado ANTES de que el lazo atienda el bus, de modo
@@ -64,14 +69,29 @@ void ValvePublisher::pollInputs(uint32_t nowMs) {
     uint32_t queuedNow = 0;
 
     for (uint8_t i = 0; i < config::kValveCount; ++i) {
-        const SignalLevel raw = inputs_.read(i);
-        debouncers_[i].update(raw, nowMs, config::kDebounceMs);
+        const SignalLevel raw  = inputs_.read(i);
+        const bool        edge = debouncers_[i].update(raw, nowMs, config::kDebounceMs);
+        const ValveState  request = config::panelRequest(debouncers_[i].stable());
+
+        // FR-213: el aviso sale del flanco del antirrebote, asi que es uno por
+        // pedido sin guardar nada mas.
+        if (edge && request == ValveState::Open && !installed(i)) {
+            log_.event(LogLevel::Warn, logtag::kNotInstalled, i,
+                       static_cast<int32_t>(config::actuatorOf(i)));
+        }
 
         // El deseado se informa en CADA vuelta, no solo en el flanco: un cambio
         // retenido por su UC511 se publica varias vueltas despues.
-        const ValveState desired = config::panelRequest(debouncers_[i].stable());
-        if (spacer_.update(i, desired, nowMs) == CommandSpacer::Outcome::Queued) {
-            queuedNow |= (uint32_t{1} << i);
+        switch (spacer_.update(i, desiredFor(i, request), nowMs)) {
+            case CommandSpacer::Outcome::Queued:
+                queuedNow |= (uint32_t{1} << i);
+                break;
+            case CommandSpacer::Outcome::Cancelled:
+                log_.event(LogLevel::Info, logtag::kCancel, i,
+                           static_cast<int32_t>(config::actuatorOf(i)));
+                break;
+            case CommandSpacer::Outcome::Unchanged:
+                break;
         }
     }
 
@@ -92,6 +112,18 @@ void ValvePublisher::pollInputs(uint32_t nowMs) {
                        static_cast<int32_t>(config::actuatorOf(i)));
         }
     }
+}
+
+// --- FR-212: equipos no instalados -------------------------------------------
+bool ValvePublisher::installed(uint8_t index) {
+    return config::actuatorInstalled(config::actuatorOf(index));
+}
+
+/// Una valvula de un UC511 no instalado publica siempre 0: si alguien olvida
+/// marcar el equipo al crecer, la valvula no abre y se nota en la puesta en
+/// marcha. El olvido falla hacia cerrado.
+ValveState ValvePublisher::desiredFor(uint8_t index, ValveState request) {
+    return installed(index) ? request : ValveState::Closed;
 }
 
 ValveState ValvePublisher::requested(uint8_t index) const {
@@ -130,7 +162,9 @@ char ValvePublisher::symbolFor(ValveState state) {
 
 void ValvePublisher::refreshDisplay() {
     for (uint8_t i = 0; i < config::kValveCount; ++i) {
-        const char s = symbolFor(requested(i));
+        // FR-215: '-' es configuracion ("este UC511 no existe"), no un estado
+        // del campo, asi que no rompe la honestidad de la interfaz.
+        const char s = installed(i) ? symbolFor(requested(i)) : symbol::kNotInstalled;
         if (s != shownSymbol_[i]) {
             shownSymbol_[i] = s;
             display_.setValveSymbol(i, s);

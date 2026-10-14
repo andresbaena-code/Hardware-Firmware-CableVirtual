@@ -38,12 +38,14 @@
 
 namespace wiga {
 
-/// Simbolos del panel. Solo dos, porque sin confirmacion del campo no hay mas
-/// que decir: representan lo que el TABLERO PIDE, no un estado verificado
-/// (FR-114b, regla de honestidad de la interfaz del Principio II v2.0.0).
+/// Simbolos del panel. '0' y '1' representan lo que se PUBLICA, no un estado
+/// verificado (FR-114b, regla de honestidad de la interfaz del Principio II
+/// v2.0.0). '-' es configuracion: el UC511 de esa valvula no esta instalado
+/// (FR-215, spec 003). Ninguno sugiere una confirmacion del campo.
 namespace symbol {
 constexpr char kNotIrrigating = '0';
 constexpr char kIrrigating    = '1';
+constexpr char kNotInstalled  = '-';
 }  // namespace symbol
 
 class ValvePublisher {
@@ -80,6 +82,8 @@ private:
     void pollInputs(uint32_t nowMs);
     void refreshDisplay();
     static char symbolFor(ValveState state);
+    static bool installed(uint8_t index);
+    static ValveState desiredFor(uint8_t index, ValveState request);
 
     IClock&               clock_;
     IDigitalInputPort&    inputs_;

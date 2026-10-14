@@ -29,7 +29,7 @@ Modbus no cambia.
 
 **Project Type**: firmware embebido
 
-**Performance Goals**: separación ≥ 8 s entre cambios del mismo UC511; espera máxima 16 s; cero espera entre equipos distintos
+**Performance Goals**: separación ≥ 8 s entre cambios del mismo UC511; espera máxima < 24 s; cero espera entre equipos distintos
 
 **Constraints**: lazo ≤ 2 ms por vuelta; SRAM < 75 % (hoy 21,1 %); sin `delay()`, sin memoria dinámica; capas puras sin `<Arduino.h>`
 
