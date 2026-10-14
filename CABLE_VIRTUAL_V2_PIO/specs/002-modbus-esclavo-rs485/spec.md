@@ -4,12 +4,17 @@
 
 **Created**: 2026-08-27
 
-**Status**: Draft
+**Status**: Done (código completo y verificado en hardware, 2026-09-03)
 
 **Input**: Corrección de premisa sobre el rol Modbus del controlador y sobre la
 topología real de la instalación. La rama `001-migracion-platformio` implementó el
 controlador como Modbus **maestro** que sondea nodos remotos. Es falso en los dos
 extremos: el controlador es **esclavo**, y los nodos remotos no están en el bus.
+
+**Cierre**: T001–T063 completados y T064 verificado en banco con hardware físico
+(Mega 2560 + MAX485 + convertidor USB-RS485 + Docklight). Las tramas de referencia
+respondieron tal cual, incluido el escenario B-08 (una hora de sondeo continuo con
+cero lecturas de `0`). Ver `docs/acta-pruebas-banco.md`.
 
 ---
 

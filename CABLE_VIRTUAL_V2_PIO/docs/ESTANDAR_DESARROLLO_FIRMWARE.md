@@ -39,54 +39,57 @@ probar sin la placa conectada. Cada verificación en campo cuesta un desplazamie
 │  Cableado: crea adaptadores, inyecta puertos,   │
 │  ejecuta el lazo. ÚNICO archivo con hardware.   │
 ├─────────────────────────────────────────────────┤
-│  lib/wiga_control/                              │
-│  Lógica de estados, reintentos, planificación.  │
+│  lib/wiga_control/ + lib/wiga_modbus/           │
+│  Lógica de estado, protocolo, tramado.          │
 │  Sin hardware. Se prueba con mocks en la PC.    │
 ├─────────────────────────────────────────────────┤
 │  lib/wiga_domain/                               │
-│  Tipos, protocolo, mapa de configuración.       │
-│  Sin hardware. constexpr y static_assert.       │
+│  Tipos, configuración, constexpr y static_assert.│
+│  Sin hardware.                                  │
 ├─────────────────────────────────────────────────┤
 │  lib/wiga_hal/                                  │
-│  Adaptadores concretos: radio, LCD, entradas,   │
+│  Adaptadores concretos: RS485, LCD, entradas,   │
 │  watchdog. ÚNICA capa que toca hardware.        │
 └─────────────────────────────────────────────────┘
 ```
 
 **Referencia**: Modelo de capas de David Parnas (1972). En firmware embebido, la capa
-`hal` es la única que incluye `<Arduino.h>`, `<XBee.h>`, o librerías de hardware.
+`hal` es la única que incluye `<Arduino.h>` o librerías de hardware.
 
 ### 2.2 Inyección de Dependencias (Puertos e Interfaces)
 
-**Problema**: si el supervisor de válvulas crea internamente un objeto `XBeeRadioAdapter`,
-no se puede reemplazar por un doble de prueba. La prueba exige hardware real.
+**Problema**: si el supervisor de válvulas crea internamente un objeto detrás del que hay
+hardware (un adaptador concreto), no se puede reemplazar por un doble de prueba. La prueba
+exige hardware real.
 
 **Solución**: el supervisor recibe una **interfaz** abstracta, no un tipo concreto. El
-archivo `main.cpp` crea el adaptador concreto y lo "enchufa" al supervisor.
+archivo `main.cpp` crea el adaptador concreto y lo "enchufa".
 
 ```cpp
-// interfaz (lib/wiga_ports/i_radio_port.h)
-class IRadioPort {
+// interfaz (lib/wiga_ports/i_byte_stream.h)
+class IByteStream {
 public:
-    virtual bool send(const ValveCommand& cmd) = 0;
-    virtual uint8_t poll(ValveReport* out, uint8_t max) = 0;
+    virtual void begin() = 0;
+    virtual int available() = 0;
+    virtual uint8_t read() = 0;
+    virtual void write(uint8_t* data, uint8_t len) = 0;  // no bloquea más de un byte
+    ...
 };
 
-// adaptador concreto (lib/wiga_hal/xbee_radio_adapter.h)
-class XBeeRadioAdapter : public IRadioPort {
-    bool send(const ValveCommand& cmd) override;  // habla con el XBee real
-    uint8_t poll(ValveReport* out, uint8_t max) override;
+// adaptador concreto (lib/wiga_hal/rs485_stream_adapter.h)
+class Rs485StreamAdapter : public IByteStream {
+    // habla con el MAX485 sobre Serial2; DE/RE en el pin 6
 };
 
-// doble de prueba (test/mocks/fake_radio.h)
-class FakeRadio : public IRadioPort {
-    bool send(const ValveCommand& cmd) override;  // graba comandos para asserts
-    uint8_t poll(ValveReport* out, uint8_t max) override;
+// doble de prueba (test/mocks/fake_byte_stream.h)
+class FakeByteStream : public IByteStream {
+    // permite inyectar fragmentación, ruido y truncamiento para las pruebas
 };
 
 // main.cpp — el único lugar donde se elige cuál usar
-XBeeRadioAdapter g_radio;
-ValveSupervisor g_supervisor(g_radio);  // recibe interfaz, no tipo concreto
+Rs485StreamAdapter g_bus(Serial2, config::kRs485DeRePin, config::kRadioBaudRate);
+ModbusSlave g_slave(g_registers, config::kModbusSlaveId, config::kModbusSilenceMs);
+ValvePublisher g_publisher(clock, inputs, registers, display, log);  // recibe interfaces
 ```
 
 **Referencia**: Dependency Inversion Principle (SOLID), Robert C. Martin (1996).
@@ -95,8 +98,8 @@ ValveSupervisor g_supervisor(g_radio);  // recibe interfaz, no tipo concreto
 ### 2.3 Temporización No Bloqueante (Super Loop)
 
 **Problema**: `delay(15)` bloquea el lazo completo durante 15 ms. Si durante ese tiempo
-llega una confirmación por radio, se pierde. Si el LCD tarda 200 ms en escribirse, el
-sistema queda mudo 200 ms.
+llega un byte del bus RS485, se pierde. Si el LCD tarda 200 ms en escribirse, el sistema
+queda mudo 200 ms.
 
 **Solución**: el lazo gira libremente. Un temporizador decide cuándo ejecutar la lógica.
 
@@ -107,12 +110,13 @@ void loop() {
     delay(15);
 }
 
-// BIEN — no bloquea, permite atender radio y LCD entre ticks
+// BIEN — no bloquea, permite atender el bus y el LCD entre ticks
 uint32_t g_lastTickMs = 0;
 
 void loop() {
     g_watchdog.feed();
     const uint32_t now = millis();
+    serviceBus(now);                        // atiende el RS485 en CADA vuelta
     if (elapsed(now, g_lastTickMs, kLoopPeriodMs)) {
         g_lastTickMs = now;
         g_supervisor.tick();
@@ -130,24 +134,25 @@ Estándar en firmware embebido desde los años 90.
 
 ### 2.4 Pruebas sin Hardware (Mocks)
 
-**Problema**: verificar que la lógica de reintentos funciona correctamente exige 35
-minutos de espera real (5 reintentos × 30 s + margen). En campo, eso es un desplazamiento.
+**Problema**: la verificación de la lógica de protocolo (tramado, CRC, direccionamiento)
+dependía del hardware y acumulaba defectos que las pruebas en verde no detectaban. Con
+hardware conectado, cada verificación cuesta un desplazamiento.
 
-**Solución**: dobles de prueba (mocks) que simulan el hardware. La lógica se ejecuta en
-la PC del desarrollador en segundos.
+**Solución**: dobles de prueba (mocks) que simulan el hardware. La lógica se ejecuta en la
+PC del desarrollador en segundos.
 
 ```cpp
-// FakeRadio simula el XBee
-FakeRadio radio;
-radio.enqueue(nodeAddress, valveId, SignalLevel::Low);  // simula confirmación
+// FakeByteStream simula el RS485, con capacidad de inyectar defectos
+FakeByteStream bus;
+bus.inject('1'); bus.inject('3'); ...  // alimentar una trama Modbus byte a byte
 
 // FakeClock avanza el tiempo sin esperar real
 FakeClock clock;
-clock.advance(30000);  // saltar 30 segundos en 0 ms
+clock.advance(50);  // saltar la ventana de antirrebote en 0 ms
 
 // FakeInputs simula el tablero
 FakeInputs inputs;
-inputs.requestOpen(0);  // simular que el operador abrió la válvula 0
+inputs.setLevel(0, SignalLevel::High);  // simular que el operador pidió riego en la 0
 ```
 
 **Framework**: Unity (incluido en PlatformIO, sin dependencia externa).
@@ -166,14 +171,14 @@ cubre.
 
 ```cpp
 // en el código
-void onTimeout(ValveRecord& record, uint32_t nowMs) {
-    // FR-006, FR-007: reintentos acotados con reposo prolongado
+void ValvePublisher::pollInputs(uint32_t nowMs) {
+    // FR-115, FR-116: nivel estable, sin valor transitorio
     ...
 }
 
 // en la prueba
-static void test_maximo_cinco_disparos_en_la_primera_media_hora(void) {
-    // SC-005 / NFR-003: protección de batería
+static void test_riego_sostenido_nunca_devuelve_cero(void) {
+    // FR-116 / SC-105: un solo 0 cerraría la válvula en campo
     ...
 }
 ```
@@ -264,8 +269,8 @@ la lógica de control.
 
 ```
 configuracion/
-├── mapa_instalacion.h    # direcciones de radio, IDs de válvula, pines
-└── tiempos.h             # intervalos de reintento, ventanas,umbrales
+├── installation_map.h    # pines de entrada, slave ID, DE/RE (lo que cambia por instalación)
+└── timing_config.h       # tiempos, baudios, umbrales, geometría del panel
 ```
 
 **REGLA**: la configuración DEBE validarse en tiempo de compilación con `static_assert`.
@@ -286,14 +291,14 @@ principal.
 
 ```cpp
 // El LCD puede fallar → el control sigue operando
-void ValveSupervisor::refreshDisplay() {
+void ValvePublisher::refreshDisplay() {
     display_.setValveSymbol(i, s);  // si falla, no pasa nada
 }
 
-// La radio puede rechazar la trama → se reintenta sin gastar intento
-if (!radio_.send(command)) {
-    log_.event(LogLevel::Error, logtag::kDrop, index, -1);
-    return;  // se reintentará en la próxima vuelta
+// El maestro puede dejar de preguntar → el esclavo sigue funcionando
+// y lo señala con el registro de diagnóstico "segundos sin sondeo" (FR-114).
+if (!slave.masterSilent(now, config::kBusSilentThresholdMs)) {
+    publisher.setBusHealthy(true);
 }
 ```
 
@@ -417,23 +422,23 @@ public:
 **Patrón**: Arrange → Act → Assert (AAA).
 
 ```cpp
-static void test_ejemplo(void) {
+static void test_un_cambio_de_interruptor_se_publica(void) {
     // Arrange — preparar el escenario
-    FakeRadio radio;
     FakeClock clock;
     FakeInputs inputs;
-    ValveSupervisor supervisor(clock, inputs, radio, ...);
-    supervisor.begin();
-    radio.clearSent();
+    FakeDisplay display;
+    FakeLog log;
+    RegisterFile registers;
+    ValvePublisher publisher(clock, inputs, registers, display, log);
+    publisher.begin();
+    inputs.setLevel(0, SignalLevel::High);
 
     // Act — ejecutar la acción
-    inputs.requestOpen(0);
-    inputs.settle();  // simular antirebote
-    supervisor.tick();
+    clock.advance(50);   // pasar la ventana de antirrebote
+    publisher.tick();
 
     // Assert — verificar el resultado
-    TEST_ASSERT_EQUAL_UINT16(1, radio.sentCount());
-    TEST_ASSERT_EQUAL_UINT8(0, radio.lastSent().valveId);
+    TEST_ASSERT_EQUAL_UINT16(1, registers.get(valveRegister(0)));
 }
 ```
 
@@ -484,22 +489,22 @@ void loop() {
 // MAL — en lib/control/algo.cpp
 #include <Arduino.h>    // ERROR: rompe las pruebas en host
 
-// BIEN — en lib/hal/xbee_adapter.cpp
+// BIEN — en lib/hal/rs485_stream_adapter.cpp
 #include <Arduino.h>    // OK: solo la capa de hardware lo incluye
 ```
 
 ### 5.3 Hardcodear configuración en la lógica
 
 ```cpp
-// MAL — dirección hardcodeada en la lógica de control
-void sendCommand() {
-    XBeeAddress64 addr(0x0013A200, 0x41C3F54F);  // ERROR
+// MAL — pin hardcodeado en la lógica control
+void ValvePublisher::tick() {
+    pinMode(6, INPUT);  // ERROR: ¿qué es el pin 6? y es config de instalación
 }
 
-// BIEN — la configuración viene del mapa
-void sendCommand() {
-    const auto& map = config::valveMapping(index);
-    XBeeAddress64 addr(config::kXBeeAddressMsb, map.nodeAddressLsb);
+// BIEN — la configuración viene del módulo de configuración único
+void main.cpp::serviceBus(uint32_t now) {
+    const uint8_t deRe = config::kRs485DeRePin;   // PH3, en installation_map.h
+    const uint8_t slaveId = config::kModbusSlaveId;  // en timing_config.h
 }
 ```
 
@@ -572,10 +577,10 @@ Antes de cada PR, verificar:
 | Documento | Qué explica |
 |-----------|-------------|
 | `AGENTS.md` | Convenciones, comandos, qué NO hacer |
-| `specs/001-migracion-platformio/spec.md` | 35 requisitos funcionales de Cable Virtual |
-| `specs/001-migracion-platformio/research.md` | 14 decisiones técnicas con evidencia |
-| `specs/001-migracion-platformio/data-model.md` | Modelo de datos y transiciones |
-| `specs/001-migracion-platformio/contracts/ports.md` | Contratos de cada puerto |
+| `specs/002-modbus-esclavo-rs485/spec.md` | Esclavo Modbus (especificación vigente) |
+| `specs/002-modbus-esclavo-rs485/contracts/register-map.md` | Mapa de registros y verificación |
+| `specs/002-modbus-esclavo-rs485/contracts/modbus-slave.md` | Contrato del bus |
+| `docs/ARQUITECTURA_DEL_FIRMWARE.md` | Arquitectura completa del sistema |
 | `docs/puesta-en-marcha.md` | Guía de compilación y carga |
 
 ---

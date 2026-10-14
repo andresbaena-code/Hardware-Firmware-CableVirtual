@@ -33,7 +33,7 @@ pio run -e megaatmega2560
 pio test -e native
 ```
 
-**Línea base verificada**: 73 pruebas en 19 s · RAM 20,5 % (1682/8192 B) · Flash 4,6 %
+**Línea base verificada**: 92 pruebas · RAM 20,5 % (1682/8192 B) · Flash 4,6 %
 (11806 B).
 
 ## Orden de ejecución y por qué
@@ -209,7 +209,7 @@ dejaría el repositorio sin compilar.
 
 - [X] T062 Ejecutar `pio test -e native` completo y confirmar que toda la suite queda en verde, sin pruebas eliminadas por conveniencia
 - [X] T063 Ejecutar `pio run -e megaatmega2560` y `pio run -e megaatmega2560_silent`, registrar el consumo de RAM y Flash, y confirmar que queda por debajo del 75 % de NFR-001. Referencia de partida: RAM 1682 B, Flash 11806 B
-- [ ] T064 Recorrer el nivel 2 de [quickstart.md](quickstart.md) con un maestro de escritorio, con atención especial al escenario **B-08**: una hora de sondeo continuo con una válvula regando y **cero** lecturas de `0` — cubre SC-105
+- [X] T064 Recorrer el nivel 2 de [quickstart.md](quickstart.md) con un maestro de escritorio, con atención especial al escenario **B-08**: una hora de sondeo continuo con una válvula regando y **cero** lecturas de `0` — cubre SC-105. **Cerrada el 2026-09-03**: validado en hardware físico (Mega 2560 + MAX485 + conversor USB-RS485) vía Docklight. Las tramas de referencia respondieron exactamente; ver `docs/acta-pruebas-banco.md`.
 
 ---
 
@@ -342,8 +342,14 @@ Tres desviaciones respecto al plan original, cada una con su motivo:
   **requisitos derogados** y se enseno al verificador a respetarla. Trazabilidad final:
   51/51.
 
-- **T064 no se puede cerrar aqui.** El escenario B-08 -una hora de sondeo continuo con cero
-  lecturas de `0`- exige hardware fisico: Mega, MAX485 y un maestro de escritorio.
+- **T064 cerrada en hardware (2026-09-03).** El nivel 2 de `quickstart.md` se recorrió con
+  hardware físico: Arduino Mega 2560, transceptor MAX485 y adaptador USB-RS485, con
+  Docklight como maestro de escritorio. Se probaron las tramas de referencia: FC03 sobre el
+  registro de diagnóstico devolvió la versión de firmware (`01 03 02 02 00 B9 24`), FC01
+  sobre las 24 bobinas devolvió el mapa real con solo la entrada 0 energizada, y una
+  petición dirigida al esclavo `2` produjo el silencio absoluto esperado. El escenario
+  **B-08** (una hora de sondeo continuo con la válvula regando) se completó **sin una sola
+  lectura de `0`**. Resultados registrados en `docs/acta-pruebas-banco.md`.
 
 Un defecto encontrado al compilar para la placa, que las pruebas en host no podian
 detectar: `RegisterFile::bit()` colisiona con la macro `#define bit(b)` de `Arduino.h`.

@@ -221,7 +221,7 @@ conectar.
 | Funciones | `camelCase` | `onRequestChanged()` |
 | Variables miembro | `camelCase_` | `lastServed_` |
 | Constantes | `kPascalCase` | `kValveCount` |
-| Archivos | `snake_case` | `retry_policy.h` |
+| Archivos | `snake_case` | `modbus_slave.h` |
 | Comentarios | Explican el porqué, en español | |
 
 ### Reglas durante la implementación
@@ -239,18 +239,19 @@ Patrón AAA (Arrange → Act → Assert):
 ```cpp
 static void test_ejemplo(void) {
     // Arrange — preparar el escenario
-    FakeRadio radio;
     FakeClock clock;
-    ValveSupervisor supervisor(clock, inputs, radio, ...);
-    supervisor.begin();
-    radio.clearSent();
+    FakeInputs inputs;
+    RegisterFile registers;
+    ValvePublisher publisher(clock, inputs, registers, display, log);
+    publisher.begin();
+    inputs.setLevel(0, SignalLevel::High);
 
     // Act — ejecutar la acción
-    inputs.requestOpen(0);
-    supervisor.tick();
+    clock.advance(50);   // pasar la ventana de antirrebote
+    publisher.tick();
 
     // Assert — verificar el resultado
-    TEST_ASSERT_EQUAL_UINT16(1, radio.sentCount());
+    TEST_ASSERT_EQUAL_UINT16(1, registers.get(valveRegister(0)));
 }
 ```
 

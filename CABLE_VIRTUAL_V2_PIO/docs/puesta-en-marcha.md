@@ -75,7 +75,7 @@ muestra y se fija el puerto con `upload_port` en `platformio.ini`.
 pio test -e native
 ```
 
-73 pruebas, unos 18 segundos, **sin ninguna placa conectada**.
+92 pruebas, en unos 9 segundos, **sin ninguna placa conectada**.
 
 En Windows el entorno `native` usa la plataforma `windows_x86`, cuyo compilador descarga
 y gestiona el propio PlatformIO. Por eso no hace falta instalar MinGW ni Visual Studio.
@@ -165,17 +165,19 @@ Los `fake_*.h` viven en `test/mocks` y se exponen con `-Itest/mocks` en `platfor
 **El controlador no responde a ningún sondeo.**
 Comprobar en este orden: que el identificador de esclavo del UC100 coincide con
 `kModbusSlaveId` (por defecto `1`); que los parámetros serie coinciden (9600 8N1); que
-A y B no están cruzados; y que el pin DE/RE es el 2. Una petición dirigida a otro
-identificador produce **silencio absoluto**, que es el comportamiento correcto y se
-confunde fácilmente con una avería.
-Si se añade un entorno de prueba nuevo, hay que repetir esa bandera.
+A y B no están cruzados; y que el pin DE/RE es el 6 (en `installation_map.h`). Una
+petición dirigida a otro identificador produce **silencio absoluto**, que es el
+comportamiento correcto y se confunde fácilmente con una avería.
 
 **El LCD no muestra nada.**
 Verificar la dirección I2C. El proyecto asume `0x27`; algunos módulos PCF8574 vienen en
 `0x3F`. Se cambia en `lib/wiga_config/timing_config.h`. Un panel que no responde **no
 detiene el control de válvulas**: es deliberado.
 
-**El firmware arranca pero no transmite nada.**
-Es lo esperado si ninguna entrada ha cambiado. El firmware **no** emite órdenes al
-arrancar, para no golpear la batería tras cada reinicio. Conmutar una entrada del tablero
-y observar el evento `TX` en consola. Ver [ARQUITECTURA_DEL_FIRMWARE.md](ARQUITECTURA_DEL_FIRMWARE.md) §8.
+**El controlador no emite nada por el RS485 aunque el bus esté conectado.**
+Es lo esperado: es un esclavo y **solo responde** cuando el maestro le pregunta. Si no hay
+maestro, su silencio es idéntico al de un bus roto. Conmutar una entrada del tablero y
+sondear con un maestro de escritorio (ver el nivel 2 de
+[quickstart.md](../specs/002-modbus-esclavo-rs485/quickstart.md)): el registro de esa
+válvula debe pasar a `1` tras el antirrebote y el evento `TX` aparece en consola. Ver
+[ARQUITECTURA_DEL_FIRMWARE.md](ARQUITECTURA_DEL_FIRMWARE.md) §8.

@@ -88,28 +88,17 @@ Valida el comportamiento en el cable sin depender del UC100 ni de la radio.
 
 ### Paso 0 — validar el cable antes que el protocolo
 
-Antes de hablar Modbus conviene comprobar que el enlace fisico existe. El entorno de
-banco emite cada 2 s un texto legible por el RS485:
+Antes de hablar Modbus conviene comprobar que el enlace fisico existe. La prueba mas
+corta es leer el registro de version (24) con el maestro de escritorio de la seccion
+siguiente: si contesta `0x0200`, cable, masa, velocidad y DE/RE estan bien.
 
-```bash
-pio run -e megaatmega2560_banco -t upload
-```
+Si no contesta, revisar en este orden: masa comun, A/B cruzados, alimentacion del
+transceptor y el pin DE/RE. El silencio de un esclavo es identico ante los tres fallos,
+asi que hay que descartarlos uno a uno con el multimetro.
 
-Con un terminal a 9600 8N1 en modo texto debe leerse `WIGA 2.0 RS485 OK esclavo=1
-9600-8N1` de forma repetida.
-
-| Qué se ve | Qué significa |
-|---|---|
-| El texto legible | A/B bien, masa común, velocidad correcta, DE/RE conmutando |
-| Basura ilegible | A y B cruzados, o velocidad distinta |
-| Nada | Sin masa común, DE/RE mal conectado, o transceptor sin alimentar |
-
-Esa distincion entre *basura* y *nada* es justo la que no se obtiene sondeando un
-esclavo: su silencio es identico ante los tres fallos.
-
-> **No usar con el UC100 conectado.** Un esclavo Modbus no debe transmitir sin que le
-> pregunten; el saludo colisionaria con el maestro. Por eso vive en un entorno aparte y
-> el build lo avisa con un `#warning`. Volver a produccion antes de seguir.
+> Hubo un entorno `megaatmega2560_banco` que emitia un saludo de texto por el RS485
+> para distinguir *basura* de *nada*. Se retiro: un esclavo que transmite sin que le
+> pregunten viola la regla MB-07, y el entorno ya no aportaba frente al sondeo directo.
 
 ### Sondeo con maestro de escritorio
 
@@ -234,6 +223,9 @@ Se pueden inyectar tal cual por el puerto serie:
 ## Nivel 3 — Campo, con el UC100 real
 
 ### Configuración del puente
+
+> Guía detallada paso a paso en [`docs/configuracion-finca.md`](../../docs/configuracion-finca.md),
+> sección *«Configurar el UC100 paso a paso»*. Aquí va el resumen de referencia rápida.
 
 Modo **Modbus Channels**, un canal por válvula:
 

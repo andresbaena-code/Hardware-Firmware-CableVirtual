@@ -4,7 +4,8 @@
 
 **Created**: 2026-08-20
 
-**Status**: Draft
+**Status**: Done (completada; el transporte XBee que describe fue sustituido por la
+especificación 002)
 
 **Input**: User description: "Migrar el firmware Arduino 'Cable Virtual' (sketch CABLE_VIRTUAL___LATCH_V1.ino) a un proyecto PlatformIO profesional en VS Code para Arduino Mega 2560, reestructurando el código monolítico en capas testeables sin cambiar el comportamiento observable en campo. El sistema lee 24 entradas digitales que replican el estado de un tablero PLC ('cable virtual') y, ante cada cambio, transmite por XBee ZigBee en modo API la orden de abrir o cerrar la válvula latch correspondiente en el nodo remoto, confirmando el estado solo cuando el nodo responde. Debe conservar: disparo secuencial de una sola válvula a la vez para no agotar la batería de 12V, reintentos acotados con espera corta y luego periodo de reposo prolongado, checksum en el payload, watchdog de 8 segundos, y visualización del estado de las 24 válvulas en un LCD I2C 20x4. Debe eliminar los bloqueos con delay() del lazo de control, centralizar el mapeo de direcciones/IDs/pines en un módulo de configuración único, y agregar trazas de diagnóstico por el puerto serie. Los sketches WIGA_24IN_LCD y WIGA_24IN_LCDB1_5 se archivan como legado documentado, no se migran."
 

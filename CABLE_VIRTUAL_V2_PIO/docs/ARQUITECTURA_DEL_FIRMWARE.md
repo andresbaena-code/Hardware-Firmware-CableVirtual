@@ -121,7 +121,8 @@ y el CI lo comprueba rompiéndolo a propósito en cada push.
 
 `wiga_modbus` está del lado puro **por una razón concreta**: la implementación anterior
 metió el protocolo en `wiga_hal`, que el entorno de pruebas excluye, y acumuló 25 defectos
-con las 73 pruebas del proyecto en verde. Ninguna lo tocaba.
+con las 73 pruebas del proyecto en verde. Ninguna lo tocaba. Hoy la suite verifica esas
+tramas: **92 pruebas**, de las cuales 56 ejercitan específicamente la capa Modbus.
 
 ---
 

@@ -1,15 +1,46 @@
 # Diagnóstico en campo
 
-Con un portátil y un cable USB se puede determinar en minutos si una válvula
-problemática es un fallo de radio, de entrada del tablero o de la válvula misma.
+El controlador ya no transmite órdenes por radio: es un **esclavo Modbus** que publica en
+un banco de registros el estado pedido por los 24 interruptores del tablero, y contesta
+cuando el UC100 (maestro) le pregunta por RS485. La confirmación del campo no existe: el
+protocolo de radio no acusa recibo (constitución v2.0.0, Principio II).
+
+Por eso hay **dos** formas de diagnosticar, complementarias:
+
+1. **Registros Modbus** — sin abrir la carcasa ni conectar un portátil, leyendo el bloque
+   de diagnóstico desde el maestro (o un maestro de escritorio).
+2. **Consola serie** — con un portátil y un cable USB para ver evento a evento.
+
+---
+
+## 1 · Diagnosticar por los registros Modbus
+
+El bloque de diagnóstico vive en las direcciones 24 a 31 (ver
+[`contracts/register-map.md`](../specs/002-modbus-esclavo-rs485/contracts/register-map.md)).
+
+| Registro | Síntoma que ayuda a ver | Interpretación |
+|---|---|---|
+| 0..23 (válvulas) | Una válvula no riega | Si vale `1`, el controlador cumple: el problema está en el puente, la radio o el actuador |
+| 25 (segundos sin sondeo) | Nada responde | Si crece sin parar, el maestro no pregunta: UC100 apagado o cable RS485 cortado |
+| 26 (errores de CRC) | Comportamiento errático | Si sube, hay ruido eléctrico o desajuste de parámetros serie |
+| 27 (errores de formato) | Ídem | Ídem |
+| 28 (peticiones válidas) | Referencia de actividad | Debe subir con cada sondeo bien formado |
+| 29 (causa de reinicio) | Reinicios inesperados | Distingue watchdog de corte de alimentación |
+| 30 (válvulas regando) | Coherencia | Debe cuadrar con el panel |
+
+**Regla de oro:** el controlador solo responde a una pregunta. Si no le preguntan, su
+**silencio es idéntico** ante "maestro apagado", "cable cortado" o "esclavo sano": el
+registro 25 es lo que distingue los tres casos.
+
+---
+
+## 2 · Consola serie
 
 ```bash
 pio device monitor -b 9600
 ```
 
----
-
-## Formato de la salida
+### Formato de la salida
 
 ```
 <tiempo_ms> [<TAG>] v=<válvula> x=<valor>
@@ -18,81 +49,55 @@ pio device monitor -b 9600
 El tiempo es milisegundos desde el arranque. `v=--` significa que el evento no
 corresponde a una válvula concreta.
 
-## Catálogo de eventos
+### Catálogo de eventos
 
 | Tag | Cuándo aparece | `x=` significa |
 |---|---|---|
 | `BOOT` | al arrancar | bits de `MCUSR`, causa del último reinicio |
-| `TX` | se transmitió una orden | número de intento (1 a 5) |
-| `ACK` | el nodo confirmó | nivel eléctrico confirmado (0 o 1) |
-| `TMO` | venció la espera sin confirmar | intentos consumidos |
-| `BACK` | la válvula entra en reposo de 1 h | fallos acumulados de esa válvula |
-| `DROP` | se descartó una trama o un envío falló | motivo o dato de contexto |
-| `LCD` | el panel dejó de responder | fallos consecutivos |
+| `TX` | el nivel pedido por un interruptor cambió | nivel que el tablero pide (0 o 1) |
+| `DROP` | se descartó una trama, o el panel dejó de responder | motivo o dato de contexto |
+| `LCD` | el panel quedó marcado como no sano | fallos consecutivos |
 
-Al arrancar, antes de `BOOT`, aparecen tres líneas sin tag: nombre del firmware, versión
-y fecha de compilación.
+Al arrancar, antes de `BOOT`, aparecen tres líneas sin tag: nombre del firmware, versión y
+fecha de compilación.
 
-## Una sesión normal
+### Una sesión normal
 
 ```
 0 WIGA Cable Virtual
 0 2.0.0
-0 Aug 20 2026 14:32:10
+0 Sep 03 2026 14:32:10
 1 [BOOT] v=-- x=1
 1 ALIMENTACION
 4210 [TX] v=7 x=1
-4290 [ACK] v=7 x=0
 ```
 
-La válvula 7 recibió la orden y el nodo confirmó 80 ms después. Todo bien.
+El operador accionó el interruptor 7 y el registro de esa válvula pasó a `1` tras la
+ventana de antirrebote. No hay confirmación: el controlador no sabe (ni puede saber) si la
+válvula de campo se movió; solo publica lo que el tablero pide.
 
 ---
 
-## Los tres fallos típicos
+## 3 · Los fallos típicos, ordenados
 
-### 1. El nodo no responde (fallo de radio)
+### 1. El maestro no pregunta (fallo de bus o de UC100)
 
-```
-4210 [TX] v=7 x=1
-34215 [TMO] v=7 x=1
-34216 [TX] v=7 x=2
-64220 [TMO] v=7 x=2
-...
-154240 [BACK] v=7 x=5
-```
+Síntoma: el registro **25** crece sin parar y el panel cambia a `PEDIDO - SIN BUS`.
 
-Cinco intentos, ninguna confirmación, y a reposo. **El firmware está bien; el problema
-está fuera.** Revisar, en este orden: alimentación del nodo, antena y alcance, y que el
-XBee del nodo esté en la red correcta (`ID`, `SC`).
+Es el fallo más probable en campo (FR-114). Revisar, en este orden: alimentación del UC100,
+conector RS485, y que A/B no estén cruzados. El controlador **sigue funcionando** y
+responderá en cuanto vuelva el maestro.
 
-Tras el `BACK` no habrá otro `TX` hasta pasada una hora. Es deliberado: protege la batería
-y los solenoides. Para forzar un intento inmediato, conmutar la entrada del tablero.
+### 2. Una válvula no riega aunque el registro vale `1`
 
-### 2. La entrada del tablero no llega (fallo de entrada)
+El controlador publica el nivel pedido; el problema está en el puente (UC100), la radio o
+el actuador. Revisar las reglas IF-THEN del UC100, el `lockout time`, y el equipo de campo.
 
-El operador acciona el tablero y **no aparece ningún `TX`**.
+### 3. El panel no cambia al accionar un interruptor (fallo de entrada o panel)
 
-El firmware no vio el cambio. Comprobar con un multímetro el pin correspondiente en el
-Mega: en reposo debe leer ~5 V (pull-up interno) y al accionar debe bajar a ~0 V. Si el
-nivel no cambia, el problema es el cableado o el contacto del tablero, no el firmware.
-
-Si el nivel oscila, puede ser el antirebote haciendo su trabajo: el firmware exige 50 ms
-de estabilidad antes de actuar. Un contacto muy sucio puede no llegar nunca a estabilizarse.
-
-### 3. El nodo confirma un estado distinto (fallo de válvula o de nodo)
-
-```
-4210 [TX] v=7 x=1
-4290 [DROP] v=7 x=1
-34215 [TMO] v=7 x=1
-```
-
-El nodo respondió, pero con un estado que **no coincide** con el solicitado. El radio
-funciona; lo que falla está en el nodo o en la válvula: solenoide agarrotado, cableado de
-la salida, o batería del nodo demasiado baja para completar el pulso latch.
-
-El firmware no da la válvula por confirmada, que es lo correcto.
+El firmware no vio el cambio (no aparece `TX`), o el panel dejó de responder (evento
+`LCD`). Comprobar con un multímetro el pin correspondiente en el Mega y el cable del LCD.
+Recuerde el antirrebote de 50 ms: un contacto sucio puede no estabilizarse nunca.
 
 ---
 
@@ -107,24 +112,26 @@ El evento `BOOT` va seguido de una línea con la causa dominante:
 | `BROWNOUT` | la tensión cayó por debajo del umbral — **revisar la batería** |
 | `WATCHDOG` | el lazo de control dejó de progresar — **es un fallo de firmware** |
 
-`WATCHDOG` es el único que apunta al firmware. Si aparece, hay que reportarlo con el
-contexto de la consola: significa que una vuelta del lazo tardó más de 8 segundos, algo
-que el diseño no permite.
+`WATCHDOG` es el único que apunta al firmware. Si aparece, reportarlo con el contexto de
+la consola: significa que una vuelta del lazo tardó más de 8 segundos, algo que el diseño
+no permite.
 
 ### Limitación conocida
 
-Algunos bootloaders (`optiboot`) limpian `MCUSR` antes de que el firmware pueda leerlo.
-Si en banco se provoca un reinicio por watchdog y **no** aparece `WATCHDOG`, es esta
+Algunos bootloaders (`optiboot`) limpian `MCUSR` antes de que el firmware pueda leerlo. Si
+en banco se provoca un reinicio por watchdog y **no** aparece `WATCHDOG`, es esta
 limitación, no un defecto del diagnóstico. El control de válvulas no depende de este dato.
 
 ---
 
 ## Qué mira el técnico primero
 
-1. ¿Aparece `TX` al conmutar la entrada? → **No**: problema de entrada o cableado.
-2. ¿Aparece `ACK` después del `TX`? → **No**: problema de radio o de alimentación del nodo.
-3. ¿Aparece `DROP` con la válvula afectada? → problema en el nodo o en la válvula.
-4. ¿Aparece `BACK`? → la válvula lleva 5 intentos fallidos; está en reposo de una hora.
+1. ¿El registro 25 sube sin parar? → el maestro no pregunta: bus o UC100.
+2. ¿Aparece el evento `TX` al conmutar una entrada? → **No**: problema de entrada o
+   cableado.
+3. ¿El registro de esa válvula vale `1` pero no riega? → el problema está en el puente, la
+   radio o el actuador.
+4. ¿Aparece `LCD`? → el panel está desconectado o su bus falla; el control sigue operando.
 5. ¿Aparece `WATCHDOG` en el arranque? → reportar al equipo de firmware.
 
 ## Silenciar el diagnóstico

@@ -105,7 +105,7 @@ Toda inconsistencia se detecta **al compilar**, no en campo.
 | **Un pin pisa el DE/RE del RS485** | `MAP-V9: un pin de entrada pisa el pin DE/RE del transceptor RS485` |
 
 **MAP-V9 es nueva** y cierra un hueco real: si un `inputPin` coincidiera con el pin de
-control de dirección del transceptor (`kRs485DeRePin`, el pin 2), leer un interruptor
+control de dirección del transceptor (`kRs485DeRePin`, el pin 6), leer un interruptor
 conmutaría el bus a transmisión y el controlador quedaría mudo de forma intermitente,
 imposible de diagnosticar en campo.
 
@@ -119,10 +119,111 @@ En [`lib/wiga_config/timing_config.h`](../lib/wiga_config/timing_config.h):
 |---|---|---|
 | `kModbusSlaveId` | `1` | Identificador propio en el bus. Debe coincidir con el que el UC100 tiene configurado en cada canal |
 | `kRadioBaudRate` | `9600` | Debe coincidir con el UC100 |
-| `kModbusSilenceMs` | `4` | Silencio reglamentario entre tramas a 9600 8N1 |
+| `kModbusSilenceMs` | `200` | Plazo para descartar una trama parcial perdida (el delimitador real de trama es la longitud esperada de 8 bytes) |
 | `kBusSilentThresholdMs` | `30000` | Sin sondeo durante este plazo, el panel avisa |
 | `kDebounceMs` | `50` | Ventana de antirrebote de los interruptores |
-| `kRs485DeRePin` | `2` | Pin de dirección del MAX485 (en `installation_map.h`) |
+| `kRs485DeRePin` | `6` | Pin de dirección del MAX485 (en `installation_map.h`) |
+
+---
+
+## Configurar el UC100 paso a paso
+
+El UC100 es **maestro Modbus** y **controlador D2D** (equipo comprado, no se programaba con
+nuestro firmware): se configura desde el software **ToolBox** de Milesight. Esta sección es
+la guía para que lea correctamente el esclavo Modbus que corre en el ATmega2560.
+
+> **Topología de referencia:**
+> `[ ATmega2560 (esclavo) ] ←──── RS485 9600 8N1 ────→ [ UC100 (maestro) ]`
+> El UC100 pregunta y el Mega contesta. El Mega **nunca** inicia una transacción.
+
+### Paso 1 — Poner el puerto serie en «Modbus Channels»
+
+En el ToolBox, seleccionar el UC100 y a la opción de operación del puerto serie asignarle el
+modo **Modbus Channels** (no GPS, no Modbus-Slave, no serial dedicado). Esto convierte el
+RS485 del UC100 en un **maestro Modbus** que va a sondear el esclavo.
+
+### Paso 2 — Ajustar el enlace serie
+
+Los parámetros serie del puerto Modbus del UC100 deben coincidir **exactamente** con los
+del esclavo:
+
+| Parámetro | Valor |
+|---|---|
+| Baud rate | **9600** |
+| Data bits | **8** |
+| Paridad | **ninguna (none)** |
+| Stop bits | **1** |
+
+Es el **9600 8N1** que declaramos en `kRadioBaudRate` de `timing_config.h`. Si no coincide,
+el UC100 manda tramas con ruido que nuestro esclavo descarta **en silencio**, y parece un
+"no responde" aunque el cable esté bien.
+
+### Paso 3 — Crear UN canal Modbus por válvula
+
+En la vista *Modbus Channels* crear un canal por cada válvula. **La dirección del canal es
+el índice de la válvula** (`valveRegister(index) == index`): no hay cálculo de mapa, el
+número de válvula ES la dirección de registro.
+
+| Campo del canal | Valor |
+|---|---|
+| Slave ID | **1** (coincide con `kModbusSlaveId`) |
+| Address | **0 a 23** (una por válvula, en orden) |
+| Quantity | **1** |
+| Type | Coil `00`, Discrete `01`, Hold16 `0E` o Input16 `10` — **cualquier lectura sirve** |
+| Execution Interval | 100 ms (podemos aguantar hasta 10 ms) |
+| Max Response Time | 1000 ms |
+| Max Retry Times | 3 |
+
+> **Por qué un canal por válvula y no uno empaquetado:** las reglas IF-THEN del UC100
+> evalúan el **valor** de un canal contra un umbral. Si empaquetáramos varias válvulas en un
+> registro, no se podrían condicionar por separado. Por eso la arquitectura publica **un
+> registro por válvula** (FR-109).
+
+### Paso 4 — Crear las reglas IF-THEN (lo que acciona la válvula)
+
+Después de leer el valor, el UC100 usa **reglas IF-THEN** para disparar el comando de radio
+D2D hacia el **UC501** que acciona la válvula. Por cada válvula se crean **dos reglas**:
+
+```
+IF  canal(válvula N) == 1  →  disparar D2D a UC501(N)  →  ABRIR
+IF  canal(válvula N) == 0  →  disparar D2D a UC501(N)  →  CERRAR
+```
+
+### Paso 5 — Poner el `lockout time` de la apertura en > 0 (clave)
+
+Es el ajuste más fácil de pasar por alto y el que sostiene toda la estrategia de re-aserción:
+
+- Con `lockout time = 0`, la condición se detecta **una sola vez**. Si ese primer comando
+  se pierde por radio, **nunca se recupera**.
+- Con `lockout time > 0` (por ejemplo unos segundos), mientras el registro siga valiendo
+  `1`, el UC100 **vuelve a emitir** el comando y un UC501 que perdió el mensaje captura uno
+  posterior. Es lo que implementa **FR-115** en el lado del puente.
+
+Con `0`, el sistema funciona en teoría pero queda sin red de seguridad ante pérdida de
+radio. **No configurarlo en `0`.**
+
+### Paso 6 — Verificar con el botón Fetch
+
+En el ToolBox, cada canal tiene un botón **Fetch**: hace una lectura puntual inmediata.
+
+1. Con los 24 interruptores en reposo: `Fetch` debe devolver **0** en todos los canales.
+2. Subir el interruptor de la válvula **3**: `Fetch` del canal 3 debe pasar a **1** (y a `0`
+   al bajarlo).
+
+Si `Fetch` devuelve el valor correcto de una válvula, la configuración de **lectura** está
+bien. Si `Fetch` falla o no responde, revisar en este orden: Slave ID del canal (`1`),
+parámetros serie (9600 8N1), y que el cable RS485 tenga A/B y masa común correctos.
+
+### Paso 7 — Probar el escenario de campo completo
+
+Una vez leído bien por `Fetch`, probar de extremo a extremo con el panel del UC501:
+
+| Prueba | Resultado esperado |
+|---|---|
+| Subir un interruptor | La válvula del campo abre en menos de un segundo tras el siguiente sondeo |
+| Bajar el interruptor | La válvula cierra |
+| Dejar una válvula regando más que el temporizador del UC501 | El riego continúa: la re-emisión reinicia el temporizador del actuador |
+| Apagar el UC100 con una válvula regando | El actuador cierra solo al vencer su temporizador (**red de seguridad** contra inundación) |
 
 ---
 

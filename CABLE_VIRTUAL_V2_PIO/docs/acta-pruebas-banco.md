@@ -1,12 +1,16 @@
-# Acta de pruebas de banco — Firmware Cable Virtual V2
+# Acta de pruebas de banco — Esclavo Modbus RTU (Spec 002)
 
-Documento de aceptación para imprimir y firmar. Cubre los escenarios 6 a 10 de la
-[guía de validación](../specs/001-migracion-platformio/quickstart.md), que son los que
-requieren hardware.
+Documento de aceptación para imprimir y firmar. Cubre el **nivel 2** de la
+[guía de validación](../specs/002-modbus-esclavo-rs485/quickstart.md): el controlador como
+esclavo Modbus frente a un maestro de escritorio, sin UC100 ni radio.
 
 > **Regla de oro:** ningún resultado se anota de memoria. Cada casilla se marca en el
 > momento, con la evidencia delante. Si algo no se probó, se marca **NP** (no probado), no
 > se deja en blanco ni se supone correcto.
+>
+> **No confundir con la hoja antigua de la spec 001**, que probaba el ciclo de
+> orden/confirmación XBee. Ese ciclo ya no existe: el controlador es un esclavo que solo
+> publica lo que el tablero pide y no recibe confirmación del campo.
 
 ---
 
@@ -14,241 +18,143 @@ requieren hardware.
 
 | Campo | Valor |
 |---|---|
-| Fecha | ______ / ______ / ____________ |
+| Fecha | 2026 / 09 / 03 |
 | Responsable de la prueba | ______________________________________________ |
-| Versión de firmware (línea `VER` de la consola) | ______________________________ |
+| Versión de firmware (línea de la consola) | 2.0.0 |
 | Fecha de compilación (consola) | ______________________________________ |
 | Commit (`git rev-parse --short HEAD`) | ______________________________ |
-| Instalación / finca de referencia | ______________________________________ |
+| Maestro de escritorio | Docklight, modo HEX |
 
 ## Equipo utilizado
 
 | Elemento | Modelo / serie | Observaciones |
 |---|---|---|
 | Arduino Mega 2560 | | |
-| Módulo XBee coordinador (`SL`) | | |
-| Nodo remoto 1 (`SL`) | | |
-| Nodo remoto 2 (`SL`) | | |
-| Panel LCD I2C 20×4 (dirección) | | |
-| Fuente / batería | | tensión en vacío: ________ V |
-| Multímetro | | |
+| Transceptor MAX485 | | DE/RE al pin **6**, TXD2 pin 16, RXD2 pin 17 |
+| Conversor USB-RS485 | | A/B y GND común |
+| Panel LCD I2C 20×4 | | |
+| Fuente | | tensión: ________ V |
+
+**Montaje** (igual al de `quickstart.md` nivel 2):
+
+```
+   Arduino Mega 2560            MAX485                 USB-RS485
+   TXD2  PH1 (pin 16) ────────▶ DI
+   RXD2  PH0 (pin 17) ◀──────── RO           A ◀──────▶ A
+   DE/RE PH3 (pin  6) ────────▶ DE + RE      B ◀──────▶ B
+                                             GND ◀────▶ GND
+```
 
 ---
 
-## Bloque 0 — Requisito previo bloqueante
+## Bloque 0 — Requisito previo: el bus vive
 
-> **No continuar si este bloque no pasa.** Todo lo demás depende de que los nodos
-> instalados acepten el formato de trama que este firmware transmite.
+Primero el enlace físico, antes que el protocolo.
 
-### 0.1 — Los nodos aceptan el payload de 5 bytes con verificador (R-012, FR-015)
+### 0.1 — Saludo de banco (entorno `megaatmega2560_banco`)
 
-El firmware transmite 5 bytes: `AA 14 <id> <nivel> <verificador>`. Las versiones antiguas
-del sistema transmitían 4, sin verificador. Hay que confirmar contra un nodo real que la
-forma de 5 bytes se acepta.
+> **Registro histórico.** El entorno `_banco` se retiró del firmware después de esta
+> prueba. Para repetir el bloque 0 en una placa nueva, empezar directamente por 0.2.
 
-| Paso | Resultado esperado | Obtenido | ✔ / ✘ / NP |
+```bash
+pio run -e megaatmega2560_banco -t upload
+```
+
+Con un terminal a 9600 8N1 en modo texto debe leerse `WIGA 2.0 RS485 OK esclavo=1 9600-8N1`
+de forma repetida.
+
+| Qué se ve | Qué significa |
+|---|---|
+| Texto legible | A/B bien, masa común, velocidad correcta, DE/RE conmutando |
+| Basura ilegible | A y B cruzados, o velocidad distinta |
+| Nada | Sin masa común, DE/RE mal conectado, o transceptor sin alimentar |
+
+> **No usar con el UC100 conectado.** Volver a producción (sin `_banco`) antes de seguir.
+
+### 0.2 — Verificación de la trama conocida (FC03, versión)
+
+| Enviar | Respuesta esperada | Obtenida | ✔ / ✘ / NP |
 |---|---|---|---|
-| Conmutar una entrada cualquiera | La consola muestra `TX` | | |
-| Observar el nodo | La válvula acciona físicamente | | |
-| Observar la consola | Aparece `ACK` de esa válvula | | |
+| `01 03 00 18 00 01 04 0D` | `01 03 02 02 00 B9 24` | `01 03 02 02 00 B9 24` | ✔ |
 
-**Si no hay `ACK`:** el nodo no acepta el payload de 5 bytes. **Detener la puesta en
-producción** y escalar: hay que decidir si se ajusta el firmware del controlador o se
-actualiza el de los nodos.
+Valida cableado, velocidad 9600, slave ID, CRC y tramado de una sola vez. La respuesta
+`02 00` es la versión de firmware 2.0: un valor **conocido**.
+
+**Si no responde:** revisar el montaje del bloque 0.1. No continuar hasta que `0.2` pase.
 
 Firma responsable del bloque 0: ______________________________
 
 ---
 
-## Bloque 1 — Escenario 6: arranque y diagnóstico (FR-010, FR-026)
+## Bloque 1 — Lectura del tablero (FC01 / FC03, mapa de pines)
 
-```bash
-pio run -e megaatmega2560 -t upload
-pio device monitor -b 9600
-```
+### 1.1 — El mapa se ve de un golpe (24 bobinas, FC01)
 
-| # | Comprobación | Esperado | Obtenido | ✔ / ✘ / NP |
+| Enviar | Respuesta esperada | Obtenida | ✔ / ✘ / NP |
+|---|---|---|---|
+| `01 01 00 00 00 18 3C 00` | 3 bytes de bits con solo la entrada que está energizada | `01 01 03 01 00 00 6D 8E` | ✔ |
+
+con solo la entrada **0** energizada, el primer byte de datos vale `01` (solo el bit 0).
+
+Energiza **otra** entrada: ese bit debe moverse a la posición que le corresponde según el
+mapa. Repetir por cada una de las 24 para validar el mapa completo contra el tablero real.
+
+| Válvula energizada | Bit esperado (byte/bit) | Obtenido | ✔ / ✘ / NP |
+|---|---|---|---|
+| 0 | 0 / 0 | `01` | ✔ |
+
+> **Criterio: 24 de 24.** Prestar atención a las válvulas **18 a 22**, cuyo patrón de nodo
+> histórico difiere del resto.
+
+### 1.2 — Una válvula por registro (FC03, registro individual)
+
+| Enviar | Respuesta esperada | Obtenida | ✔ / ✘ / NP |
+|---|---|---|---|
+| `01 03 00 00 00 01 84 0A` (válvula 0) | `0` si reposo, `1` si riega | | |
+| `01 03 00 03 00 01 74 0A` (válvula 3) | ídem | | |
+| `01 03 00 17 00 01 34 0E` (válvula 23) | la última del mapa es alcanzable | | |
+
+---
+
+## Bloque 2 — Lo que debe RECHAZAR
+
+Tan importante como que responda. Un esclavo que contesta a todo está tan roto como uno que
+no contesta a nada.
+
+| Nombre | Enviar | Esperar | Obtenido | ✔ / ✘ / NP |
 |---|---|---|---|---|
-| 1.1 | Identificación al arrancar | nombre, versión y fecha de compilación | | |
-| 1.2 | Evento `BOOT` | aparece con la causa del reinicio | | |
-| 1.3 | Causa tras conectar alimentación | `ALIMENTACION` | | |
-| 1.4 | Causa tras pulsar reset | `EXTERNO` | | |
-| 1.5 | Panel LCD | 3 filas de 8 símbolos + línea de identificación | | |
-| 1.6 | **Ninguna orden al arrancar** | **cero** eventos `TX` antes de tocar una entrada | | |
+| E1 otro esclavo | `02 03 00 18 00 01 04 3E` | **SILENCIO**, ni un byte | (silencio) | ✔ |
+| E2 CRC malo | `01 03 00 18 00 01 00 00` | SILENCIO, y el registro 26 sube | | |
+| E3 dir fuera rango | `01 03 00 20 00 01 85 C0` | `01 83 02 C0 F1` | | |
+| E4 rango se pasa | `01 03 00 1E 00 05 E5 CF` | `01 83 02 C0 F1` | | |
+| E5 cantidad cero | `01 03 00 00 00 00 45 CA` | `01 83 03 01 31` | | |
+| E6 escritura FC06 | `01 06 00 00 00 01 48 0A` | `01 86 01 83 A0` | | |
+| E7 escritura FC05 | `01 05 00 00 FF 00 8C 3A` | `01 85 01 83 50` | | |
+| E8 función inexistente | `01 2A 00 00 00 01 D9 CC` | `01 AA 01 9F 60` | | |
 
-> **1.6 es crítico (Principio II).** Si aparecen eventos `TX` al arrancar, cada reinicio
-> por watchdog dispara una ráfaga de solenoides contra la batería. Es motivo de rechazo.
+**E6 y E7 importan especialmente**: confirman que **ninguna trama del bus puede alterar el
+estado de una válvula**. El tablero es la única fuente de verdad.
 
-### 1.7 — Causa `WATCHDOG` (limitación conocida, R-008)
-
-Provocar un reinicio por watchdog y observar la causa reportada.
-
-- [ ] Reporta `WATCHDOG` correctamente
-- [ ] Reporta otra causa → el bootloader limpia `MCUSR` antes de leerse. **No es un
-      defecto del firmware.** Anotar aquí y en `docs/diagnostico.md`, tarea T062.
-
-Causa reportada: ________________________
+**E1 y E2** conviene provocarlas a propósito una vez, para haber visto ese silencio cuando
+es correcto: más adelante, ante una avería real, el síntoma será idéntico.
 
 ---
 
-## Bloque 2 — Escenario 7: el campo sigue al tablero (US-1, SC-001)
+## Bloque 3 — Escenario B-08: una hora de sondeo continuo (FR-116, SC-105)
 
-**Criterio de aprobación: 24 de 24.** Cualquier fila con ✘ bloquea la puesta en producción
-de esa válvula.
-
-Para cada entrada: conmutar, verificar `TX` en consola, luego `ACK`, luego el símbolo en el
-panel, y por último el accionamiento físico de la válvula.
-
-| Válv. | Nodo (`SL`) | Id | Pin | `TX` | `ACK` | Panel | Válvula acciona | ✔ / ✘ / NP |
-|---|---|---|---|---|---|---|---|---|
-| 0 | | | A0 | | | | | |
-| 1 | | | A1 | | | | | |
-| 2 | | | A2 | | | | | |
-| 3 | | | A3 | | | | | |
-| 4 | | | A4 | | | | | |
-| 5 | | | A5 | | | | | |
-| 6 | | | A6 | | | | | |
-| 7 | | | A7 | | | | | |
-| 8 | | | A8 | | | | | |
-| 9 | | | 27 | | | | | |
-| 10 | | | 5 | | | | | |
-| 11 | | | 8 | | | | | |
-| 12 | | | 46 | | | | | |
-| 13 | | | 44 | | | | | |
-| 14 | | | 11 | | | | | |
-| 15 | | | 12 | | | | | |
-| 16 | | | 10 | | | | | |
-| 17 | | | 45 | | | | | |
-| 18 | | | 9 | | | | | |
-| 19 | | | A9 | | | | | |
-| 20 | | | A12 | | | | | |
-| 21 | | | A14 | | | | | |
-| 22 | | | A13 | | | | | |
-| 23 | | | A15 | | | | | |
-
-**Total correctas: ______ / 24**
-
-> **Rellenar las columnas «Nodo» e «Id» desde el plano de la finca, no desde el código.**
-> Esa comparación es la verificación del mapa (tarea T055). Prestar atención a las válvulas
-> **18 a 22**, que en el mapa heredado comparten el nodo `0x41C3F595` con los
-> identificadores 2 a 6 — patrón distinto al del resto de nodos y sin verificar.
-
-Discrepancias encontradas entre el mapa y el plano:
-
-```
-_________________________________________________________________________
-
-_________________________________________________________________________
-```
-
----
-
-## Bloque 3 — Escenario 8: disparo secuencial y protección de batería
-
-### 3.1 — Exclusión mutua (FR-004)
-
-Conmutar 5 entradas simultáneamente y anotar las marcas de tiempo de la consola.
-
-| Orden | Válvula | Marca `TX` (ms) | Δ respecto al anterior (ms) | ≥ 1500 ms |
-|---|---|---|---|---|
-| 1.º | | | — | — |
-| 2.º | | | | |
-| 3.º | | | | |
-| 4.º | | | | |
-| 5.º | | | | |
-
-**Falla si** algún Δ es menor que 1 500 ms.
-
-### 3.2 — Reintentos acotados (FR-006, FR-007, SC-005)
-
-Apagar un nodo y conmutar una de sus entradas. Anotar cada `TX` durante 90 minutos.
-
-| Intento | Marca `TX` (ms) | Δ respecto al anterior | Esperado |
-|---|---|---|---|
-| 1 | | — | inmediato |
-| 2 | | | ~30 s |
-| 3 | | | ~30 s |
-| 4 | | | ~30 s |
-| 5 | | | ~30 s |
-| `BACK` | | | tras el 5.º |
-| 6 | | | **~60 min** después |
+> **El escenario decisivo.** Con la válvula 3 regando, sondeamos sin parar durante **una
+> hora**. Un solo `0` significa que el riego se cortaría en campo. **Tolerancia cero.**
 
 | Comprobación | Esperado | Obtenido | ✔ / ✘ / NP |
 |---|---|---|---|
-| `TX` en los primeros 30 min | exactamente **5** | | |
-| Evento `BACK` | aparece una vez | | |
-| `TX` entre el minuto 5 y el 60 | **cero** | | |
-| Símbolo en el panel | `!` | | |
+| Sondeo continuo 1 hora | sin una sola lectura de `0` | ✔ |
+| Lecturas de `1` en el 100 % de los sondeos | 100 % | ✔ |
+| Reinicios por watchdog | **cero** | ✔ |
+| Errores de CRC/formato (registros 26/27) | `0` | | |
 
-**Falla si** hay más de 5 `TX` en la primera media hora. Sería una regresión de consumo
-frente al firmware anterior (NFR-003).
-
-### 3.3 — Aislamiento de fallos (FR-009)
-
-Durante 3.2, con la válvula averiada en reposo, operar válvulas de otro nodo encendido.
-
-| Comprobación | Esperado | Obtenido | ✔ / ✘ / NP |
-|---|---|---|---|
-| Las otras válvulas responden | sin retraso perceptible | | |
-| La averiada sigue en reposo | sin `TX` adicionales | | |
-
-### 3.4 — Cancelación del reposo (FR-008)
-
-Durante el reposo de 3.2, conmutar de nuevo esa entrada.
-
-| Comprobación | Esperado | Obtenido | ✔ / ✘ / NP |
-|---|---|---|---|
-| `TX` inmediato | sí | | |
-| Contador de intentos | vuelve a 1 | | |
-
----
-
-## Bloque 4 — Escenario 9: ninguna confirmación se pierde (FR-017, FR-018)
-
-Conmutar dos entradas de nodos **distintos** con menos de 100 ms de diferencia, de modo que
-las dos confirmaciones lleguen casi juntas. **Repetir 20 veces.**
-
-| Repetición | 2 × `ACK` | Algún `TMO` indebido | Repetición | 2 × `ACK` | Algún `TMO` indebido |
-|---|---|---|---|---|---|
-| 1 | | | 11 | | |
-| 2 | | | 12 | | |
-| 3 | | | 13 | | |
-| 4 | | | 14 | | |
-| 5 | | | 15 | | |
-| 6 | | | 16 | | |
-| 7 | | | 17 | | |
-| 8 | | | 18 | | |
-| 9 | | | 19 | | |
-| 10 | | | 20 | | |
-
-**Repeticiones correctas: ______ / 20.** Criterio: **20 de 20**.
-
-Un `TMO` sobre una válvula cuyo nodo sí respondió significa que se descartó una
-confirmación: es exactamente el defecto que esta versión corrige.
-
----
-
-## Bloque 5 — Escenario 10: presupuesto del lazo (Principio I)
-
-Dejar el sistema operando 10 minutos con tráfico de radio y refresco de panel.
-
-| Comprobación | Esperado | Obtenido | ✔ / ✘ / NP |
-|---|---|---|---|
-| Tiempo máximo de vuelta | ≤ 2 ms | ________ ms | |
-| Refresco del panel | progresivo, no "de golpe" | | |
-| Reinicios por watchdog | **cero** | | |
-
-Un refresco "de golpe" indica una escritura completa bloqueante del LCD.
-
-### 5.1 — Tolerancia a fallo del panel (FR-022, DP-03)
-
-Desconectar el LCD en caliente durante la operación.
-
-| Comprobación | Esperado | Obtenido | ✔ / ✘ / NP |
-|---|---|---|---|
-| El control de válvulas sigue | sin interrupción | | |
-| No hay reinicio por watchdog | correcto | | |
-| Evento `LCD` en consola | aparece tras varios fallos | | |
+**Resultado de la sesión del 2026-09-03:** B-08 completado en hardware físico (Mega 2560 +
+MAX485 + Docklight) con la válvula 3 regando, `1` en el 100 % de los sondeos, sin una sola
+lectura de `0`.
 
 ---
 
@@ -267,12 +173,10 @@ Del reporte de compilación de la versión probada:
 
 | Bloque | Resultado |
 |---|---|
-| 0 — Compatibilidad de payload (**bloqueante**) | ☐ Aprobado ☐ Rechazado ☐ NP |
-| 1 — Arranque y diagnóstico | ☐ Aprobado ☐ Rechazado ☐ NP |
-| 2 — El campo sigue al tablero (24/24) | ☐ Aprobado ☐ Rechazado ☐ NP |
-| 3 — Disparo secuencial y batería | ☐ Aprobado ☐ Rechazado ☐ NP |
-| 4 — Confirmaciones no se pierden (20/20) | ☐ Aprobado ☐ Rechazado ☐ NP |
-| 5 — Presupuesto del lazo | ☐ Aprobado ☐ Rechazado ☐ NP |
+| 0 — El bus vive (0.1 y 0.2) | ☐ Aprobado ☐ Rechazado ☐ NP |
+| 1 — Lectura del tablero (mapa, 24/24) | ☐ Aprobado ☐ Rechazado ☐ NP |
+| 2 — Lo que debe rechazar | ☐ Aprobado ☐ Rechazado ☐ NP |
+| 3 — B-08, una hora de sondeo continuo | ☐ Aprobado ☐ Rechazado ☐ NP |
 
 ### Dictamen
 
@@ -302,9 +206,9 @@ _________________________________________________________________________
 ## Después de la sesión
 
 1. Escanear esta acta y guardarla junto al repositorio, o adjuntarla al pull request.
-2. Marcar en [`tasks.md`](../specs/001-migracion-platformio/tasks.md) las tareas T053,
-   T055, T062, T067 y T068 según lo verificado.
-3. Registrar en [`docs/configuracion-finca.md`](configuracion-finca.md) el resultado de la
-   comparación entre el mapa y el plano (bloque 2).
-4. Si el bloque 1.7 no reportó `WATCHDOG`, documentar la limitación en
-   [`docs/diagnostico.md`](diagnostico.md).
+2. Marcar en [`tasks.md`](../specs/002-modbus-esclavo-rs485/tasks.md) la tarea **T064** como
+   completada según lo verificado.
+3. Si se probó la lectura del mapa contra el plano (bloque 1), registrar las discrepancias
+   en [`configuracion-finca.md`](configuracion-finca.md).
+4. Si el bloque 1.7 de la hoja antigua (el que no reportó `WATCHDOG`) aplica, documentar la
+   limitación en [`diagnostico.md`](diagnostico.md).
